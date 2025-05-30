@@ -1,4 +1,4 @@
-export type TransactionType = "expense" | "refund";
+export type TransactionType = "expense" | "refund" | "salary";
 
 export interface Transaction {
   id: string; // uuid
