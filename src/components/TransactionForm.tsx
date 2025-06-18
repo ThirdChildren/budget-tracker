@@ -48,6 +48,9 @@ export const TransactionForm: FC<Props> = ({ onAdd, descriptions }) => {
           "Intrattenimento",
           "Cibo",
           "Regali",
+          "Farmacia",
+          "Ricarica",
+          "Piano accumulo bitcoin",
           "Altro",
         ].map((c) => (
           <option key={c}>{c}</option>
