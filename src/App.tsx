@@ -11,12 +11,16 @@ import {
   TrendingUp,
   TrendingDown,
   Wallet,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "./components/ui/button";
 
 import type { Transaction } from "./types";
 import { TransactionForm } from "./components/TransactionForm";
 import { CategoryList } from "./components/CategoryList";
+import { SpendingByCategoryChart } from "./components/charts/SpendingByCategoryChart";
+import { MonthlyTrendsChart } from "./components/charts/MonthlyTrendsChart";
+import { StackedBarChart } from "./components/charts/StackedBarChart";
 
 export default function App() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -28,6 +32,7 @@ export default function App() {
     "0"
   )}`;
   const [selectedMonth, setSelectedMonth] = useState<string>(thisMonth);
+  const [showCharts, setShowCharts] = useState(false);
 
   // add a new transaction
   const handleAdd = (data: Omit<Transaction, "id">) => {
@@ -174,10 +179,36 @@ export default function App() {
                   </label>
                 </Button>
               </div>
+
+              {/* Divisore per separare il pulsante grafici */}
+              <div className="hidden sm:block h-10 w-px bg-slate-200 dark:bg-slate-700 mx-4" />
+
+              {/* View Charts Button migliorato */}
+              <Button
+                variant={showCharts ? "default" : "outline"}
+                className="flex items-center gap-2 px-6 py-3 rounded-full font-semibold shadow-md border-2 border-blue-500 bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-800 transition-all focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+                style={{ minWidth: 160 }}
+                onClick={() => setShowCharts((v) => !v)}
+                aria-pressed={showCharts}
+                title={showCharts ? "Nascondi grafici" : "Visualizza grafici"}
+              >
+                <BarChart3 className="w-5 h-5" />
+                {showCharts ? "Nascondi Grafici" : "Vedi Grafici"}
+              </Button>
             </div>
           </div>
         </div>
       </header>
+
+      {/* Charts Section */}
+      {showCharts && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
+          <div className="flex flex-col md:flex-row md:gap-6 md:justify-center gap-8">
+            <SpendingByCategoryChart transactions={filtered} />
+            <MonthlyTrendsChart transactions={transactions} />
+          </div>
+        </section>
+      )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Summary Cards */}
