@@ -13,15 +13,22 @@ export const CategoryList: FC<Props> = ({ transactions }) => {
     [transactions]
   );
 
+  if (categories.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-6xl mb-4">📊</div>
+        <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
+          Nessuna categoria
+        </h3>
+        <p className="text-slate-600 dark:text-slate-400">
+          Aggiungi la tua prima transazione per vedere le categorie
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className="
-        grid gap-5
-        sm:grid-cols-2       /* 2 colonne da 640 px in su  */
-        lg:grid-cols-3       /* 3 colonne da 1024 px in su */
-        2xl:grid-cols-4      /* 4 colonne su schermi grandi */
-      "
-    >
+    <div className="grid gap-6 grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
       {categories.map((cat) => (
         <CategoryCard key={cat} category={cat} transactions={transactions} />
       ))}
