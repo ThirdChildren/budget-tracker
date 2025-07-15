@@ -12,6 +12,7 @@ import {
   TrendingDown,
   Wallet,
   BarChart3,
+  CloudDownload,
 } from "lucide-react";
 import { Button } from "./components/ui/button";
 
@@ -32,6 +33,10 @@ export default function App() {
   )}`;
   const [selectedMonth, setSelectedMonth] = useState<string>(thisMonth);
   const [showCharts, setShowCharts] = useState(false);
+
+  // Inserisco lo stato per mostrare/nascondere il dialog e il CID inserito
+  const [showPinataDialog, setShowPinataDialog] = useState(false);
+  const [pinataCid, setPinataCid] = useState("");
 
   // add a new transaction
   const handleAdd = (data: Omit<Transaction, "id">) => {
@@ -177,6 +182,15 @@ export default function App() {
                     />
                   </label>
                 </Button>
+                {/* Pulsante Da Pinata/IPFS con dialog */}
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPinataDialog(true)}
+                  className="flex-1 flex items-center gap-2 min-w-[100px] justify-center border-yellow-400 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
+                  title="Carica le transazioni direttamente da Pinata/IPFS tramite CID"
+                >
+                  <CloudDownload size={16} /> Da Pinata
+                </Button>
               </div>
 
               {/* Divisore per separare il pulsante grafici */}
@@ -309,6 +323,59 @@ export default function App() {
           <CategoryList transactions={filtered} />
         </div>
       </main>
+
+      {/* Dialog per inserimento CID Pinata/IPFS */}
+      {showPinataDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 w-full max-w-sm flex flex-col gap-4 border border-yellow-400">
+            <h2 className="text-lg font-semibold text-yellow-700 dark:text-yellow-300 flex items-center gap-2">
+              <CloudDownload size={20} />
+              Carica da Pinata/IPFS
+            </h2>
+            <input
+              type="text"
+              placeholder="Incolla qui il CID del file JSON"
+              value={pinataCid}
+              onChange={(e) => setPinataCid(e.target.value)}
+              className="border border-slate-300 dark:border-slate-600 rounded-lg p-3 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all w-full"
+              autoFocus
+            />
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="ghost"
+                onClick={() => setShowPinataDialog(false)}
+              >
+                Annulla
+              </Button>
+              <Button
+                variant="outline"
+                className="bg-yellow-400 text-yellow-900 hover:bg-yellow-300 dark:bg-yellow-600 dark:text-yellow-100 dark:hover:bg-yellow-500 border-yellow-400"
+                onClick={async () => {
+                  if (!pinataCid) return;
+                  try {
+                    const url = `https://gateway.pinata.cloud/ipfs/${pinataCid}`;
+                    const res = await fetch(url);
+                    if (!res.ok)
+                      throw new Error(
+                        "Impossibile recuperare il file da Pinata/IPFS"
+                      );
+                    const data = await res.json();
+                    setTransactions(data);
+                    setShowPinataDialog(false);
+                    setPinataCid("");
+                  } catch (err) {
+                    alert(
+                      "Errore nel caricamento del file da Pinata/IPFS. Verifica il CID e riprova."
+                    );
+                  }
+                }}
+              >
+                Carica
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
