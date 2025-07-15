@@ -20,7 +20,6 @@ import { TransactionForm } from "./components/TransactionForm";
 import { CategoryList } from "./components/CategoryList";
 import { SpendingByCategoryChart } from "./components/charts/SpendingByCategoryChart";
 import { MonthlyTrendsChart } from "./components/charts/MonthlyTrendsChart";
-import { StackedBarChart } from "./components/charts/StackedBarChart";
 
 export default function App() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);

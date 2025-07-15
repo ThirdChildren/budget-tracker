@@ -5,7 +5,7 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
-import { ChevronDown, Calendar, FileText, DollarSign } from "lucide-react";
+import { Calendar, FileText, DollarSign } from "lucide-react";
 import type { Transaction } from "@/types";
 import React from "react";
 
