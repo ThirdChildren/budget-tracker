@@ -12,7 +12,7 @@ import {
   TrendingDown,
   Wallet,
   BarChart3,
-  CloudDownload,
+  Plus,
 } from "lucide-react";
 import { Button } from "./components/ui/button";
 
@@ -33,10 +33,6 @@ export default function App() {
   )}`;
   const [selectedMonth, setSelectedMonth] = useState<string>(thisMonth);
   const [showCharts, setShowCharts] = useState(false);
-
-  // Inserisco lo stato per mostrare/nascondere il dialog e il CID inserito
-  const [showPinataDialog, setShowPinataDialog] = useState(false);
-  const [pinataCid, setPinataCid] = useState("");
 
   // add a new transaction
   const handleAdd = (data: Omit<Transaction, "id">) => {
@@ -182,15 +178,6 @@ export default function App() {
                     />
                   </label>
                 </Button>
-                {/* Pulsante Da Pinata/IPFS con dialog */}
-                <Button
-                  variant="outline"
-                  onClick={() => setShowPinataDialog(true)}
-                  className="flex-1 flex items-center gap-2 min-w-[100px] justify-center border-yellow-400 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
-                  title="Carica le transazioni direttamente da Pinata/IPFS tramite CID"
-                >
-                  <CloudDownload size={16} /> Da Pinata
-                </Button>
               </div>
 
               {/* Divisore per separare il pulsante grafici */}
@@ -225,63 +212,63 @@ export default function App() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 hover:shadow-md transition-shadow">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-slide-up">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 hover:shadow-lg transition-all transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                   Spese Totali
                 </p>
-                <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">
                   €{totalExpense.toFixed(2)}
                 </p>
               </div>
-              <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-xl">
+              <div className="p-3 bg-gradient-to-br from-red-100 to-red-200 dark:from-red-900/30 dark:to-red-800/30 rounded-xl">
                 <TrendingDown className="h-6 w-6 text-red-600 dark:text-red-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 hover:shadow-md transition-shadow">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 hover:shadow-lg transition-all transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                   Rimborsi
                 </p>
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
                   €{totalRefund.toFixed(2)}
                 </p>
               </div>
-              <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
+              <div className="p-3 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/30 dark:to-green-800/30 rounded-xl">
                 <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 hover:shadow-md transition-shadow">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 hover:shadow-lg transition-all transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                   Stipendio
                 </p>
-                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">
                   €{totalSalary.toFixed(2)}
                 </p>
               </div>
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+              <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30 rounded-xl">
                 <Wallet className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 hover:shadow-md transition-shadow">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 hover:shadow-lg transition-all transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                   Saldo Netto
                 </p>
                 <p
-                  className={`text-2xl font-bold ${
+                  className={`text-2xl font-bold mt-1 ${
                     netBalance >= 0
                       ? "text-green-600 dark:text-green-400"
                       : "text-red-600 dark:text-red-400"
@@ -293,8 +280,8 @@ export default function App() {
               <div
                 className={`p-3 rounded-xl ${
                   netBalance >= 0
-                    ? "bg-green-100 dark:bg-green-900/30"
-                    : "bg-red-100 dark:bg-red-900/30"
+                    ? "bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/30 dark:to-green-800/30"
+                    : "bg-gradient-to-br from-red-100 to-red-200 dark:from-red-900/30 dark:to-red-800/30"
                 }`}
               >
                 {netBalance >= 0 ? (
@@ -308,74 +295,27 @@ export default function App() {
         </div>
 
         {/* Transaction Form */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-6">
-            Aggiungi Transazione
+        <div className="bg-gradient-to-br from-white to-blue-50/30 dark:from-slate-800 dark:to-slate-800/50 rounded-2xl shadow-lg border-2 border-blue-100 dark:border-slate-700 p-8 animate-fade-in">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-6 flex items-center gap-2">
+            <div className="p-2 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-lg">
+              <Plus className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            Aggiungi Transazioni
           </h2>
           <TransactionForm onAdd={handleAdd} descriptions={descriptions} />
         </div>
 
         {/* Category Cards */}
-        <div>
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-6">
+        <div className="animate-fade-in">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6 flex items-center gap-2">
+            <div className="p-2 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-lg">
+              <BarChart3 className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
             Riepilogo per Categoria
           </h2>
           <CategoryList transactions={filtered} />
         </div>
       </main>
-
-      {/* Dialog per inserimento CID Pinata/IPFS */}
-      {showPinataDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 w-full max-w-sm flex flex-col gap-4 border border-yellow-400">
-            <h2 className="text-lg font-semibold text-yellow-700 dark:text-yellow-300 flex items-center gap-2">
-              <CloudDownload size={20} />
-              Carica da Pinata/IPFS
-            </h2>
-            <input
-              type="text"
-              placeholder="Incolla qui il CID del file JSON"
-              value={pinataCid}
-              onChange={(e) => setPinataCid(e.target.value)}
-              className="border border-slate-300 dark:border-slate-600 rounded-lg p-3 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all w-full"
-              autoFocus
-            />
-            <div className="flex gap-2 justify-end">
-              <Button
-                variant="ghost"
-                onClick={() => setShowPinataDialog(false)}
-              >
-                Annulla
-              </Button>
-              <Button
-                variant="outline"
-                className="bg-yellow-400 text-yellow-900 hover:bg-yellow-300 dark:bg-yellow-600 dark:text-yellow-100 dark:hover:bg-yellow-500 border-yellow-400"
-                onClick={async () => {
-                  if (!pinataCid) return;
-                  try {
-                    const url = `https://gateway.pinata.cloud/ipfs/${pinataCid}`;
-                    const res = await fetch(url);
-                    if (!res.ok)
-                      throw new Error(
-                        "Impossibile recuperare il file da Pinata/IPFS"
-                      );
-                    const data = await res.json();
-                    setTransactions(data);
-                    setShowPinataDialog(false);
-                    setPinataCid("");
-                  } catch (err) {
-                    alert(
-                      "Errore nel caricamento del file da Pinata/IPFS. Verifica il CID e riprova."
-                    );
-                  }
-                }}
-              >
-                Carica
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
