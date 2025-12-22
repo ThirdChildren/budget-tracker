@@ -14,7 +14,6 @@ import {
   BarChart3,
   Plus,
 } from "lucide-react";
-import { Button } from "./components/ui/button";
 
 import type { Transaction, PaymentMethod } from "./types";
 import { TransactionForm } from "./components/TransactionForm";
@@ -176,77 +175,72 @@ export default function App() {
               </div>
 
               {/* Controls */}
-              <div className="flex flex-col sm:flex-row sm:items-end gap-3 w-full sm:w-auto">
-                {/* Periodo */}
-                <div className="flex-1 min-w-[160px]">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Periodo
-                  </label>
-                  <div className="relative">
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Periodo - Design compatto */}
+                <div className="relative group">
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl opacity-0 group-hover:opacity-100 blur transition duration-300"></div>
+                  <div className="relative flex items-center gap-2 bg-white dark:bg-slate-800 rounded-2xl px-4 py-2.5 border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 transition-all">
+                    <Calendar
+                      size={18}
+                      className="text-blue-600 dark:text-blue-400"
+                    />
                     <input
                       type="month"
                       value={selectedMonth}
                       onChange={(e) => setSelectedMonth(e.target.value)}
-                      className="border border-slate-300 dark:border-slate-600 rounded-xl p-3 pr-10 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all w-full"
-                    />
-                    <Calendar
-                      size={20}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                      className="bg-transparent text-sm font-medium text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer"
                     />
                   </div>
                 </div>
 
-                {/* Divisore verticale su desktop */}
-                <div className="hidden sm:block h-10 w-px bg-slate-200 dark:bg-slate-700 mx-4" />
-
-                {/* Export/Import Button Group */}
-                <div className="flex-1 flex flex-col sm:flex-row gap-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-2 shadow-sm">
-                  <Button
-                    variant="outline"
+                {/* Export/Import Buttons - Design moderno */}
+                <div className="flex items-center gap-2">
+                  <button
                     onClick={exportJSON}
-                    className="flex-1 flex items-center gap-2 min-w-[100px] justify-center hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                    className="group relative px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl font-medium text-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
+                    title="Esporta JSON"
                   >
-                    <FileDown size={16} /> JSON
-                  </Button>
-                  <Button
-                    variant="outline"
+                    <FileDown size={16} />
+                    <span className="hidden sm:inline">JSON</span>
+                  </button>
+                  <button
                     onClick={exportCSV}
-                    className="flex-1 flex items-center gap-2 min-w-[100px] justify-center hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                    className="group relative px-4 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white rounded-xl font-medium text-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
+                    title="Esporta CSV"
                   >
-                    <FileDown size={16} /> CSV
-                  </Button>
-                  <Button
-                    variant="outline"
-                    asChild
-                    className="flex-1 flex items-center gap-2 min-w-[100px] justify-center hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                    <FileDown size={16} />
+                    <span className="hidden sm:inline">CSV</span>
+                  </button>
+                  <label
+                    className="group relative px-4 py-2.5 bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white rounded-xl font-medium text-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2 cursor-pointer"
+                    title="Importa file"
                   >
-                    <label className="cursor-pointer flex items-center gap-2 w-full justify-center">
-                      <Upload size={16} /> Import
-                      <input
-                        type="file"
-                        accept="application/json"
-                        onChange={handleUpload}
-                        className="hidden"
-                      />
-                    </label>
-                  </Button>
+                    <Upload size={16} />
+                    <span className="hidden sm:inline">Import</span>
+                    <input
+                      type="file"
+                      accept="application/json"
+                      onChange={handleUpload}
+                      className="hidden"
+                    />
+                  </label>
                 </div>
 
-                {/* Divisore per separare il pulsante grafici */}
-                <div className="hidden sm:block h-10 w-px bg-slate-200 dark:bg-slate-700 mx-4" />
-
-                {/* View Charts Button migliorato */}
-                <Button
-                  variant={showCharts ? "default" : "outline"}
-                  className="flex items-center gap-2 px-6 py-3 rounded-full font-semibold shadow-md border-2 border-blue-500 bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-800 transition-all focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
-                  style={{ minWidth: 160 }}
+                {/* View Charts Button - Design aggiornato */}
+                <button
                   onClick={() => setShowCharts((v) => !v)}
-                  aria-pressed={showCharts}
+                  className={`relative px-5 py-2.5 rounded-xl font-semibold text-sm shadow-lg transition-all duration-300 hover:scale-105 flex items-center gap-2 ${
+                    showCharts
+                      ? "bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white"
+                      : "bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 hover:border-pink-400 dark:hover:border-pink-500 text-slate-900 dark:text-slate-100"
+                  }`}
                   title={showCharts ? "Nascondi grafici" : "Visualizza grafici"}
                 >
-                  <BarChart3 className="w-5 h-5" />
-                  {showCharts ? "Nascondi Grafici" : "Vedi Grafici"}
-                </Button>
+                  <BarChart3 size={18} />
+                  <span className="hidden md:inline">
+                    {showCharts ? "Nascondi" : "Grafici"}
+                  </span>
+                </button>
               </div>
             </div>
           </div>
