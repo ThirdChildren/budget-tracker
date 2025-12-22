@@ -5,13 +5,15 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
-import { Calendar, FileText, DollarSign } from "lucide-react";
-import type { Transaction } from "@/types";
+import { Calendar, FileText, DollarSign, Bitcoin } from "lucide-react";
+import type { Transaction, PaymentMethod } from "@/types";
 import React from "react";
 
 interface Props {
   category: string;
   transactions: Transaction[];
+  showInSats: boolean;
+  paymentMethod: PaymentMethod;
 }
 
 const categoryIcons: Record<string, string> = {
@@ -39,13 +41,19 @@ const transactionTypeColors = {
   salary: "text-blue-600 dark:text-blue-400",
 };
 
-export const CategoryCard: FC<Props> = ({ category, transactions }) => {
+export const CategoryCard: FC<Props> = ({
+  category,
+  transactions,
+  showInSats,
+  paymentMethod,
+}) => {
   const filtered = useMemo(
     () => transactions.filter((t) => t.category === category),
     [transactions, category]
   );
 
   const total = filtered.reduce((s, t) => s + t.amount, 0);
+  const totalSats = filtered.reduce((s, t) => s + (t.amountSats || 0), 0);
   const expenseTotal = filtered
     .filter((t) => t.type === "expense")
     .reduce((s, t) => s + t.amount, 0);
@@ -82,16 +90,28 @@ export const CategoryCard: FC<Props> = ({ category, transactions }) => {
           <div className="flex items-center gap-4">
             <div className="text-right">
               <div className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                € {total.toFixed(2)}
+                {paymentMethod === "bitcoin" && showInSats
+                  ? `${totalSats.toLocaleString()} sats`
+                  : `€ ${total.toFixed(2)}`}
               </div>
               {expenseTotal > 0 && (
                 <div className="text-sm text-red-600 dark:text-red-400">
-                  -€ {expenseTotal.toFixed(2)}
+                  {paymentMethod === "bitcoin" && showInSats
+                    ? `-${filtered
+                        .filter((t) => t.type === "expense")
+                        .reduce((s, t) => s + (t.amountSats || 0), 0)
+                        .toLocaleString()} sats`
+                    : `-€ ${expenseTotal.toFixed(2)}`}
                 </div>
               )}
               {refundTotal > 0 && (
                 <div className="text-sm text-green-600 dark:text-green-400">
-                  +€ {refundTotal.toFixed(2)}
+                  {paymentMethod === "bitcoin" && showInSats
+                    ? `+${filtered
+                        .filter((t) => t.type === "refund")
+                        .reduce((s, t) => s + (t.amountSats || 0), 0)
+                        .toLocaleString()} sats`
+                    : `+€ ${refundTotal.toFixed(2)}`}
                 </div>
               )}
             </div>
@@ -148,15 +168,33 @@ export const CategoryCard: FC<Props> = ({ category, transactions }) => {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-slate-400" />
-                  <span
-                    className={`font-semibold ${
-                      transactionTypeColors[tx.type]
-                    }`}
-                  >
-                    {tx.type === "expense" ? "-" : "+"}€ {tx.amount.toFixed(2)}
-                  </span>
+                <div className="flex flex-col items-end gap-1">
+                  <div className="flex items-center gap-2">
+                    {tx.paymentMethod === "bitcoin" ? (
+                      <Bitcoin className="w-4 h-4 text-orange-500" />
+                    ) : (
+                      <DollarSign className="w-4 h-4 text-slate-400" />
+                    )}
+                    <span
+                      className={`font-semibold ${
+                        transactionTypeColors[tx.type]
+                      }`}
+                    >
+                      {tx.type === "expense" ? "-" : "+"}
+                      {paymentMethod === "bitcoin" &&
+                      showInSats &&
+                      tx.amountSats
+                        ? `${tx.amountSats.toLocaleString()} sats`
+                        : `€ ${tx.amount.toFixed(2)}`}
+                    </span>
+                  </div>
+                  {tx.paymentMethod === "bitcoin" && tx.amountSats && (
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      {showInSats
+                        ? `€ ${tx.amount.toFixed(2)}`
+                        : `${tx.amountSats.toLocaleString()} sats`}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

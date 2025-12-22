@@ -1,13 +1,19 @@
 import { type FC, useMemo } from "react";
 import { CategoryCard } from "./CategoryCard";
-import type { Transaction } from "../types";
+import type { Transaction, PaymentMethod } from "../types";
 import React from "react";
 
 interface Props {
   transactions: Transaction[];
+  showInSats: boolean;
+  paymentMethod: PaymentMethod;
 }
 
-export const CategoryList: FC<Props> = ({ transactions }) => {
+export const CategoryList: FC<Props> = ({
+  transactions,
+  showInSats,
+  paymentMethod,
+}) => {
   const categories = useMemo(
     () => Array.from(new Set(transactions.map((t) => t.category))),
     [transactions]
@@ -30,7 +36,13 @@ export const CategoryList: FC<Props> = ({ transactions }) => {
   return (
     <div className="grid gap-6 grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
       {categories.map((cat) => (
-        <CategoryCard key={cat} category={cat} transactions={transactions} />
+        <CategoryCard
+          key={cat}
+          category={cat}
+          transactions={transactions}
+          showInSats={showInSats}
+          paymentMethod={paymentMethod}
+        />
       ))}
     </div>
   );

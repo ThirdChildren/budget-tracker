@@ -1,6 +1,6 @@
 import type { FC } from "react";
 import { useForm } from "react-hook-form";
-import type { Transaction, TransactionType } from "../types";
+import type { Transaction, TransactionType, PaymentMethod } from "../types";
 import { Button } from "./ui/button";
 import {
   Calendar,
@@ -12,31 +12,96 @@ import {
   X,
   Save,
   ListPlus,
+  Bitcoin,
 } from "lucide-react";
 import React, { useState } from "react";
 
 interface Props {
   onAdd: (tx: Omit<Transaction, "id">) => void;
   descriptions: string[];
+  paymentMethod: PaymentMethod;
+  btcPrice: number | null;
 }
 
-export const TransactionForm: FC<Props> = ({ onAdd, descriptions }) => {
+export const TransactionForm: FC<Props> = ({
+  onAdd,
+  descriptions,
+  paymentMethod,
+  btcPrice,
+}) => {
   const [pendingTransactions, setPendingTransactions] = useState<
     Omit<Transaction, "id">[]
   >([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
+  const [amountUnit, setAmountUnit] = useState<"eur" | "sats">("eur");
 
   const {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
-  } = useForm<Omit<Transaction, "id">>();
+  } = useForm<
+    Omit<Transaction, "id" | "paymentMethod" | "amountSats" | "btcPrice">
+  >();
+
+  const currentAmount = watch("amount");
+
+  // Calculate conversion
+  const convertedAmount = () => {
+    if (paymentMethod !== "bitcoin" || !currentAmount || !btcPrice) return null;
+
+    if (amountUnit === "eur") {
+      // EUR to SATS
+      const sats = (Number(currentAmount) / btcPrice) * 100000000;
+      return sats.toFixed(0);
+    } else {
+      // SATS to EUR
+      const eur = (Number(currentAmount) / 100000000) * btcPrice;
+      return eur.toFixed(2);
+    }
+  };
 
   // Add transaction to pending list
-  const onAddToPending = (data: Omit<Transaction, "id">) => {
-    setPendingTransactions((prev) => [...prev, data]);
+  const onAddToPending = (
+    data: Omit<Transaction, "id" | "paymentMethod" | "amountSats" | "btcPrice">
+  ) => {
+    let transaction: Omit<Transaction, "id">;
+
+    if (paymentMethod === "bitcoin" && btcPrice) {
+      if (amountUnit === "sats") {
+        // Input in sats, calculate EUR
+        const amountInEur = (Number(data.amount) / 100000000) * btcPrice;
+        transaction = {
+          ...data,
+          amount: amountInEur,
+          amountSats: Number(data.amount),
+          btcPrice,
+          paymentMethod: "bitcoin",
+        };
+      } else {
+        // Input in EUR, calculate sats
+        const amountInSats = (Number(data.amount) / btcPrice) * 100000000;
+        transaction = {
+          ...data,
+          amount: Number(data.amount),
+          amountSats: Math.round(amountInSats),
+          btcPrice,
+          paymentMethod: "bitcoin",
+        };
+      }
+    } else {
+      // Credit card transaction
+      transaction = {
+        ...data,
+        amount: Number(data.amount),
+        paymentMethod: "creditCard",
+      };
+    }
+
+    setPendingTransactions((prev) => [...prev, transaction]);
     setSelectedDate(data.date);
+
     // Reset form but keep date
     reset({
       date: data.date,
@@ -176,13 +241,52 @@ export const TransactionForm: FC<Props> = ({ onAdd, descriptions }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-              <DollarSign className="inline w-4 h-4 mr-2" />
+              {paymentMethod === "bitcoin" ? (
+                <Bitcoin className="inline w-4 h-4 mr-2" />
+              ) : (
+                <DollarSign className="inline w-4 h-4 mr-2" />
+              )}
               Importo
             </label>
+
+            {/* Bitcoin: Toggle EUR/SATS */}
+            {paymentMethod === "bitcoin" && (
+              <div className="flex gap-2 mb-2">
+                <button
+                  type="button"
+                  onClick={() => setAmountUnit("eur")}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                    amountUnit === "eur"
+                      ? "bg-orange-500 text-white shadow-md"
+                      : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600"
+                  }`}
+                >
+                  € Euro
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAmountUnit("sats")}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                    amountUnit === "sats"
+                      ? "bg-orange-500 text-white shadow-md"
+                      : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600"
+                  }`}
+                >
+                  ₿ Satoshi
+                </button>
+              </div>
+            )}
+
             <input
               type="number"
-              step="0.01"
-              placeholder="0.00"
+              step={amountUnit === "sats" ? "1" : "0.01"}
+              placeholder={
+                paymentMethod === "bitcoin"
+                  ? amountUnit === "sats"
+                    ? "0 sats"
+                    : "0.00 €"
+                  : "0.00 €"
+              }
               {...register("amount", {
                 required: "L'importo è obbligatorio",
                 min: {
@@ -192,6 +296,17 @@ export const TransactionForm: FC<Props> = ({ onAdd, descriptions }) => {
               })}
               className="w-full border border-slate-300 dark:border-slate-600 rounded-xl p-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             />
+
+            {/* Conversion preview for Bitcoin */}
+            {paymentMethod === "bitcoin" && currentAmount && btcPrice && (
+              <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                ≈{" "}
+                {amountUnit === "eur"
+                  ? `${convertedAmount()} sats`
+                  : `€${convertedAmount()}`}
+              </p>
+            )}
+
             {errors.amount && (
               <p className="text-sm text-red-600 dark:text-red-400">
                 {errors.amount.message}
@@ -281,7 +396,12 @@ export const TransactionForm: FC<Props> = ({ onAdd, descriptions }) => {
                     {tx.description}
                   </div>
                   <div className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                    {tx.category} • €{Number(tx.amount).toFixed(2)}
+                    {tx.category} •
+                    {tx.paymentMethod === "bitcoin" && tx.amountSats
+                      ? ` ${tx.amountSats.toLocaleString()} sats (€${Number(
+                          tx.amount
+                        ).toFixed(2)})`
+                      : ` €${Number(tx.amount).toFixed(2)}`}
                   </div>
                 </div>
                 <Button
