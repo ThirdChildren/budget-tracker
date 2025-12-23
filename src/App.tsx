@@ -4,6 +4,8 @@ import React, { useState, useMemo, useEffect } from "react";
 import { v4 as uuid } from "uuid";
 import * as Papa from "papaparse";
 import { saveAs } from "file-saver";
+import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
+import { Capacitor } from "@capacitor/core";
 import {
   Calendar,
   FileDown,
@@ -92,19 +94,83 @@ export default function App() {
   };
 
   // export JSON
-  const exportJSON = () => {
-    const blob = new Blob([JSON.stringify(transactions, null, 2)], {
-      type: "application/json",
-    });
-    saveAs(blob, "transactions.json");
+  const exportJSON = async () => {
+    const content = JSON.stringify(transactions, null, 2);
+    const fileName = `transactions_${
+      new Date().toISOString().split("T")[0]
+    }.json`;
+
+    // Check if running on native platform (mobile)
+    if (Capacitor.isNativePlatform()) {
+      try {
+        // Request permissions first
+        const permissions = await Filesystem.checkPermissions();
+        if (permissions.publicStorage !== "granted") {
+          const request = await Filesystem.requestPermissions();
+          if (request.publicStorage !== "granted") {
+            alert("Permessi necessari per salvare il file");
+            return;
+          }
+        }
+
+        await Filesystem.writeFile({
+          path: fileName,
+          data: content,
+          directory: Directory.Documents,
+          encoding: Encoding.UTF8,
+        });
+        alert(`File salvato:\n${fileName}\n\nTrovalo in Documenti`);
+      } catch (error) {
+        console.error("Errore salvataggio file:", error);
+        alert(`Errore: ${error}`);
+      }
+    } else {
+      // Browser - use file-saver
+      const blob = new Blob([content], {
+        type: "application/json",
+      });
+      saveAs(blob, fileName);
+    }
   };
 
   // export CSV
-  const exportCSV = () => {
-    const blob = new Blob([Papa.unparse(transactions)], {
-      type: "text/csv;charset=utf-8;",
-    });
-    saveAs(blob, "transactions.csv");
+  const exportCSV = async () => {
+    const content = Papa.unparse(transactions);
+    const fileName = `transactions_${
+      new Date().toISOString().split("T")[0]
+    }.csv`;
+
+    // Check if running on native platform (mobile)
+    if (Capacitor.isNativePlatform()) {
+      try {
+        // Request permissions first
+        const permissions = await Filesystem.checkPermissions();
+        if (permissions.publicStorage !== "granted") {
+          const request = await Filesystem.requestPermissions();
+          if (request.publicStorage !== "granted") {
+            alert("Permessi necessari per salvare il file");
+            return;
+          }
+        }
+
+        await Filesystem.writeFile({
+          path: fileName,
+          data: content,
+          directory: Directory.Documents,
+          encoding: Encoding.UTF8,
+        });
+        alert(`File salvato:\n${fileName}\n\nTrovalo in Documenti`);
+      } catch (error) {
+        console.error("Errore salvataggio file:", error);
+        alert(`Errore: ${error}`);
+      }
+    } else {
+      // Browser - use file-saver
+      const blob = new Blob([content], {
+        type: "text/csv;charset=utf-8;",
+      });
+      saveAs(blob, fileName);
+    }
   };
 
   // gather all existing description strings for suggestions
@@ -201,7 +267,7 @@ export default function App() {
                     title="Esporta JSON"
                   >
                     <FileDown size={16} />
-                    <span className="hidden sm:inline">JSON</span>
+                    <span>JSON</span>
                   </button>
                   <button
                     onClick={exportCSV}
@@ -209,14 +275,14 @@ export default function App() {
                     title="Esporta CSV"
                   >
                     <FileDown size={16} />
-                    <span className="hidden sm:inline">CSV</span>
+                    <span>CSV</span>
                   </button>
                   <label
                     className="group relative px-4 py-2.5 bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white rounded-xl font-medium text-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2 cursor-pointer"
                     title="Importa file"
                   >
                     <Upload size={16} />
-                    <span className="hidden sm:inline">Import</span>
+                    <span>Import</span>
                     <input
                       type="file"
                       accept="application/json"
