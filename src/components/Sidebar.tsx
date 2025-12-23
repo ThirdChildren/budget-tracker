@@ -77,7 +77,6 @@ export const Sidebar: FC<Props> = ({
             <button
               onClick={() => {
                 onPaymentMethodChange("creditCard");
-                onToggle();
               }}
               className={`w-full p-4 rounded-xl border-2 transition-all ${
                 selectedPaymentMethod === "creditCard"
@@ -119,7 +118,6 @@ export const Sidebar: FC<Props> = ({
             <button
               onClick={() => {
                 onPaymentMethodChange("bitcoin");
-                onToggle();
               }}
               className={`w-full p-4 rounded-xl border-2 transition-all ${
                 selectedPaymentMethod === "bitcoin"
@@ -194,27 +192,6 @@ export const Sidebar: FC<Props> = ({
                   Errore nel caricamento del prezzo
                 </p>
               )}
-
-              {/* Toggle View in Sats/EUR */}
-              <div className="mt-4 pt-4 border-t border-orange-200 dark:border-orange-800">
-                <button
-                  onClick={onToggleSatsView}
-                  className="w-full flex items-center justify-between p-3 rounded-lg bg-white dark:bg-slate-800 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all"
-                >
-                  <div className="flex items-center gap-2">
-                    <Eye
-                      size={16}
-                      className="text-orange-600 dark:text-orange-400"
-                    />
-                    <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                      Visualizza in
-                    </span>
-                  </div>
-                  <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
-                    {showInSats ? "Satoshi" : "Euro"}
-                  </span>
-                </button>
-              </div>
             </div>
           )}
 
