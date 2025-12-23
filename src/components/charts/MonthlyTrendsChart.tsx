@@ -143,7 +143,7 @@ export const MonthlyTrendsChart: FC<Props> = ({ transactions }) => {
                   padding: expanded ? 20 : 10,
                   font: {
                     size: expanded ? 13 : 11,
-                    weight: "600",
+                    weight: 600,
                     family: "'Inter', sans-serif",
                   },
                   usePointStyle: true,
@@ -202,7 +202,7 @@ export const MonthlyTrendsChart: FC<Props> = ({ transactions }) => {
                   callback: (value) => `€${value}`,
                   font: {
                     size: 12,
-                    weight: "500",
+                    weight: 500,
                   },
                   color: "rgba(100, 116, 139, 0.8)",
                   padding: 8,
@@ -218,7 +218,7 @@ export const MonthlyTrendsChart: FC<Props> = ({ transactions }) => {
                 ticks: {
                   font: {
                     size: 12,
-                    weight: "600",
+                    weight: 600,
                   },
                   color: "rgba(100, 116, 139, 0.9)",
                   padding: 8,

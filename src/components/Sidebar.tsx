@@ -1,6 +1,6 @@
 import React from "react";
 import type { FC } from "react";
-import { CreditCard, Bitcoin, TrendingUp, Eye, Menu, X } from "lucide-react";
+import { CreditCard, Bitcoin, TrendingUp, Menu, X } from "lucide-react";
 import type { PaymentMethod } from "../types";
 
 interface Props {
@@ -19,8 +19,6 @@ export const Sidebar: FC<Props> = ({
   onPaymentMethodChange,
   btcPrice,
   isLoading,
-  showInSats,
-  onToggleSatsView,
   isOpen,
   onToggle,
 }) => {

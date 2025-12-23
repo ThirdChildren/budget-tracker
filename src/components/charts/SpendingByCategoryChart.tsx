@@ -105,7 +105,7 @@ export const SpendingByCategoryChart: FC<Props> = ({ transactions }) => {
                   padding: expanded ? 15 : 8,
                   font: {
                     size: expanded ? 12 : 10,
-                    weight: "500",
+                    weight: 500,
                   },
                   usePointStyle: true,
                   pointStyle: "circle",
