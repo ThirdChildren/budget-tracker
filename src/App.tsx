@@ -31,7 +31,7 @@ export default function App() {
   const now = new Date();
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
     2,
-    "0"
+    "0",
   )}`;
   const [selectedMonth, setSelectedMonth] = useState<string>(thisMonth);
   const [showCharts, setShowCharts] = useState(false);
@@ -50,7 +50,7 @@ export default function App() {
       setIsBtcLoading(true);
       try {
         const response = await fetch(
-          "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eur"
+          "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eur",
         );
         const data = await response.json();
         setBtcPrice(data.bitcoin.eur);
@@ -177,9 +177,9 @@ export default function App() {
   const descriptions = useMemo(
     () =>
       Array.from(new Set(transactions.map((t) => t.description.trim()))).filter(
-        Boolean
+        Boolean,
       ),
-    [transactions]
+    [transactions],
   );
 
   // filter by selected month (YYYY-MM) and payment method
@@ -188,9 +188,9 @@ export default function App() {
       transactions
         .filter((t) => t.date.startsWith(selectedMonth))
         .filter(
-          (t) => !t.paymentMethod || t.paymentMethod === selectedPaymentMethod
+          (t) => !t.paymentMethod || t.paymentMethod === selectedPaymentMethod,
         ),
-    [transactions, selectedMonth, selectedPaymentMethod]
+    [transactions, selectedMonth, selectedPaymentMethod],
   );
 
   // calculate totals
@@ -205,6 +205,26 @@ export default function App() {
     .reduce((sum, t) => sum + t.amount, 0);
   const netBalance = totalSalary + totalRefund - totalExpense;
 
+  // Calculate Bitcoin total balance (all-time, not just current month)
+  const btcInitialBalanceSats = parseInt(
+    import.meta.env.VITE_BTC_INITIAL_BALANCE_SATS || "0",
+    10,
+  );
+  const btcTotalBalanceSats = useMemo(() => {
+    const btcTransactions = transactions.filter(
+      (t) => t.paymentMethod === "bitcoin" && t.amountSats !== undefined,
+    );
+    const btcDelta = btcTransactions.reduce((sum, t) => {
+      // For Bitcoin: salary/refund add sats, expenses subtract sats
+      if (t.type === "salary" || t.type === "refund") {
+        return sum + (t.amountSats || 0);
+      } else {
+        return sum - (t.amountSats || 0);
+      }
+    }, 0);
+    return btcInitialBalanceSats + btcDelta;
+  }, [transactions, btcInitialBalanceSats]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex">
       {/* Sidebar */}
@@ -217,6 +237,7 @@ export default function App() {
         onToggleSatsView={() => setShowInSats(!showInSats)}
         isOpen={isSidebarOpen}
         onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+        btcBalanceSats={btcTotalBalanceSats}
       />
 
       {/* Main Content */}

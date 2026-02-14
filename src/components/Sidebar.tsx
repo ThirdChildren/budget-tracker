@@ -12,6 +12,7 @@ interface Props {
   onToggleSatsView: () => void;
   isOpen: boolean;
   onToggle: () => void;
+  btcBalanceSats: number;
 }
 
 export const Sidebar: FC<Props> = ({
@@ -21,6 +22,7 @@ export const Sidebar: FC<Props> = ({
   isLoading,
   isOpen,
   onToggle,
+  btcBalanceSats,
 }) => {
   return (
     <>
@@ -157,39 +159,72 @@ export const Sidebar: FC<Props> = ({
           {/* Bitcoin Info Section */}
           {selectedPaymentMethod === "bitcoin" && (
             <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 rounded-xl p-4 border-2 border-orange-200 dark:border-orange-800 animate-fade-in mb-4">
-              <div className="flex items-center gap-2 mb-3">
-                <TrendingUp
-                  className="text-orange-600 dark:text-orange-400"
-                  size={20}
-                />
-                <h3 className="font-semibold text-orange-900 dark:text-orange-100">
-                  Prezzo Bitcoin
-                </h3>
-              </div>
-              {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-sm text-slate-600 dark:text-slate-400">
-                    Caricamento...
-                  </span>
+              {/* Bitcoin Price */}
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp
+                    className="text-orange-600 dark:text-orange-400"
+                    size={20}
+                  />
+                  <h3 className="font-semibold text-orange-900 dark:text-orange-100">
+                    Prezzo Bitcoin
+                  </h3>
                 </div>
-              ) : btcPrice ? (
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-sm text-slate-600 dark:text-slate-400">
+                      Caricamento...
+                    </span>
+                  </div>
+                ) : btcPrice ? (
+                  <div>
+                    <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+                      €
+                      {btcPrice.toLocaleString("it-IT", {
+                        maximumFractionDigits: 2,
+                      })}
+                    </p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                      1 BTC = 100,000,000 satoshi
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-red-600 dark:text-red-400">
+                    Errore nel caricamento del prezzo
+                  </p>
+                )}
+              </div>
+
+              {/* Bitcoin Balance */}
+              <div className="pt-4 border-t border-orange-200 dark:border-orange-800">
+                <div className="flex items-center gap-2 mb-3">
+                  <Bitcoin
+                    className="text-orange-600 dark:text-orange-400"
+                    size={20}
+                  />
+                  <h3 className="font-semibold text-orange-900 dark:text-orange-100">
+                    Saldo Totale
+                  </h3>
+                </div>
                 <div>
                   <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
-                    €
-                    {btcPrice.toLocaleString("it-IT", {
-                      maximumFractionDigits: 2,
-                    })}
+                    {btcBalanceSats.toLocaleString("it-IT")}
+                    <span className="text-base ml-1 font-normal">sats</span>
                   </p>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                    1 BTC = 100,000,000 satoshi
-                  </p>
+                  {btcPrice && (
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                      ≈ €
+                      {((btcBalanceSats / 100000000) * btcPrice).toLocaleString(
+                        "it-IT",
+                        {
+                          maximumFractionDigits: 2,
+                        },
+                      )}
+                    </p>
+                  )}
                 </div>
-              ) : (
-                <p className="text-sm text-red-600 dark:text-red-400">
-                  Errore nel caricamento del prezzo
-                </p>
-              )}
+              </div>
             </div>
           )}
 

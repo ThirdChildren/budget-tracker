@@ -279,7 +279,13 @@ export const TransactionForm: FC<Props> = ({
 
             <input
               type="number"
-              step={amountUnit === "sats" ? "1" : "0.01"}
+              step={
+                paymentMethod === "creditCard"
+                  ? "0.01"
+                  : amountUnit === "sats"
+                    ? "1"
+                    : "0.01"
+              }
               placeholder={
                 paymentMethod === "bitcoin"
                   ? amountUnit === "sats"
