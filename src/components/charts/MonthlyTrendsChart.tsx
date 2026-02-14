@@ -10,12 +10,13 @@ import {
   Legend,
 } from "chart.js";
 import { Maximize2, Minimize2 } from "lucide-react";
-import type { Transaction } from "../../types";
+import type { Transaction, PaymentMethod } from "../../types";
 
 Chart.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 interface Props {
   transactions: Transaction[];
+  paymentMethod: PaymentMethod;
 }
 
 function getMonthLabel(date: string) {
@@ -23,7 +24,10 @@ function getMonthLabel(date: string) {
   return `${month}/${year.slice(2)}`;
 }
 
-export const MonthlyTrendsChart: FC<Props> = ({ transactions }) => {
+export const MonthlyTrendsChart: FC<Props> = ({
+  transactions,
+  paymentMethod,
+}) => {
   const [expanded, setExpanded] = useState(false);
   // Raggruppa per mese (YYYY-MM)
   const dataByMonth = useMemo(() => {
@@ -31,13 +35,17 @@ export const MonthlyTrendsChart: FC<Props> = ({ transactions }) => {
       string,
       { expense: number; refund: number; salary: number }
     >();
-    for (const tx of transactions) {
+    // Filtra le transazioni in base al metodo di pagamento selezionato
+    const filteredTransactions = transactions.filter(
+      (tx) => !tx.paymentMethod || tx.paymentMethod === paymentMethod,
+    );
+    for (const tx of filteredTransactions) {
       const ym = tx.date.slice(0, 7);
       if (!map.has(ym)) map.set(ym, { expense: 0, refund: 0, salary: 0 });
       map.get(ym)![tx.type] += tx.amount;
     }
     return map;
-  }, [transactions]);
+  }, [transactions, paymentMethod]);
 
   const labels = Array.from(dataByMonth.keys()).sort();
   const expenses = labels.map((m) => dataByMonth.get(m)?.expense ?? 0);
@@ -175,7 +183,7 @@ export const MonthlyTrendsChart: FC<Props> = ({ transactions }) => {
                   footer: (items) => {
                     const total = items.reduce(
                       (sum, item) => sum + (item.parsed.y || 0),
-                      0
+                      0,
                     );
                     return `\nTotale: €${total.toFixed(2)}`;
                   },

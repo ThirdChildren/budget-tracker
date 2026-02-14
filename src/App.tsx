@@ -1,6 +1,6 @@
 // src/App.tsx
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, Suspense, lazy } from "react";
 import { v4 as uuid } from "uuid";
 import * as Papa from "papaparse";
 import { saveAs } from "file-saver";
@@ -20,9 +20,19 @@ import {
 import type { Transaction, PaymentMethod } from "./types";
 import { TransactionForm } from "./components/TransactionForm";
 import { CategoryList } from "./components/CategoryList";
-import { SpendingByCategoryChart } from "./components/charts/SpendingByCategoryChart";
-import { MonthlyTrendsChart } from "./components/charts/MonthlyTrendsChart";
 import { Sidebar } from "./components/Sidebar";
+
+// Lazy load dei grafici per code-splitting
+const SpendingByCategoryChart = lazy(() =>
+  import("./components/charts/SpendingByCategoryChart").then((m) => ({
+    default: m.SpendingByCategoryChart,
+  })),
+);
+const MonthlyTrendsChart = lazy(() =>
+  import("./components/charts/MonthlyTrendsChart").then((m) => ({
+    default: m.MonthlyTrendsChart,
+  })),
+);
 
 export default function App() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -336,10 +346,21 @@ export default function App() {
         {/* Charts Section */}
         {showCharts && (
           <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
-            <div className="flex flex-col md:flex-row md:gap-6 md:justify-center gap-8">
-              <SpendingByCategoryChart transactions={filtered} />
-              <MonthlyTrendsChart transactions={transactions} />
-            </div>
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
+                </div>
+              }
+            >
+              <div className="flex flex-col md:flex-row md:gap-6 md:justify-center gap-8">
+                <SpendingByCategoryChart transactions={filtered} />
+                <MonthlyTrendsChart
+                  transactions={transactions}
+                  paymentMethod={selectedPaymentMethod}
+                />
+              </div>
+            </Suspense>
           </section>
         )}
 

@@ -64,7 +64,7 @@ export const TransactionForm: FC<Props> = ({
 
   // Add transaction to pending list
   const onAddToPending = (
-    data: Omit<Transaction, "id" | "paymentMethod" | "amountSats" | "btcPrice">
+    data: Omit<Transaction, "id" | "paymentMethod" | "amountSats" | "btcPrice">,
   ) => {
     let transaction: Omit<Transaction, "id">;
 
@@ -335,7 +335,7 @@ export const TransactionForm: FC<Props> = ({
                   <option key={t} value={t}>
                     {transactionTypeLabels[t]}
                   </option>
-                )
+                ),
               )}
             </select>
             {errors.type && (
@@ -405,7 +405,7 @@ export const TransactionForm: FC<Props> = ({
                     {tx.category} •
                     {tx.paymentMethod === "bitcoin" && tx.amountSats
                       ? ` ${tx.amountSats.toLocaleString()} sats (€${Number(
-                          tx.amount
+                          tx.amount,
                         ).toFixed(2)})`
                       : ` €${Number(tx.amount).toFixed(2)}`}
                   </div>
