@@ -33,7 +33,7 @@ export const MonthlyTrendsChart: FC<Props> = ({
   const dataByMonth = useMemo(() => {
     const map = new Map<
       string,
-      { expense: number; refund: number; salary: number }
+      { expense: number; refund: number; salary: number; obligation: number }
     >();
     // Filtra le transazioni in base al metodo di pagamento selezionato
     const filteredTransactions = transactions.filter(
@@ -41,8 +41,23 @@ export const MonthlyTrendsChart: FC<Props> = ({
     );
     for (const tx of filteredTransactions) {
       const ym = tx.date.slice(0, 7);
-      if (!map.has(ym)) map.set(ym, { expense: 0, refund: 0, salary: 0 });
-      map.get(ym)![tx.type] += tx.amount;
+      if (!map.has(ym))
+        map.set(ym, { expense: 0, refund: 0, salary: 0, obligation: 0 });
+      const monthTotals = map.get(ym)!;
+      switch (tx.type) {
+        case "expense":
+          monthTotals.expense += tx.amount;
+          break;
+        case "refund":
+          monthTotals.refund += tx.amount;
+          break;
+        case "salary":
+          monthTotals.salary += tx.amount;
+          break;
+        case "obligation":
+          monthTotals.obligation += tx.amount;
+          break;
+      }
     }
     return map;
   }, [transactions, paymentMethod]);
@@ -51,6 +66,7 @@ export const MonthlyTrendsChart: FC<Props> = ({
   const expenses = labels.map((m) => dataByMonth.get(m)?.expense ?? 0);
   const refunds = labels.map((m) => dataByMonth.get(m)?.refund ?? 0);
   const salaries = labels.map((m) => dataByMonth.get(m)?.salary ?? 0);
+  const obligations = labels.map((m) => dataByMonth.get(m)?.obligation ?? 0);
 
   const data = {
     labels: labels.map(getMonthLabel),
@@ -101,6 +117,22 @@ export const MonthlyTrendsChart: FC<Props> = ({
         borderWidth: 3,
         borderRadius: 10,
         hoverBackgroundColor: "rgba(59, 130, 246, 1)",
+        hoverBorderWidth: 4,
+      },
+      {
+        label: "Obbligazioni",
+        data: obligations,
+        backgroundColor: (context: any) => {
+          const ctx = context.chart.ctx;
+          const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+          gradient.addColorStop(0, "rgba(168, 85, 247, 0.9)");
+          gradient.addColorStop(1, "rgba(168, 85, 247, 0.3)");
+          return gradient;
+        },
+        borderColor: "rgb(168, 85, 247)",
+        borderWidth: 3,
+        borderRadius: 10,
+        hoverBackgroundColor: "rgba(168, 85, 247, 1)",
         hoverBorderWidth: 4,
       },
     ],

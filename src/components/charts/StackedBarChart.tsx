@@ -22,27 +22,49 @@ export const StackedBarChart: FC<Props> = ({ transactions, selectedMonth }) => {
   // Filtra per mese selezionato
   const filtered = useMemo(
     () => transactions.filter((t) => t.date.startsWith(selectedMonth)),
-    [transactions, selectedMonth]
+    [transactions, selectedMonth],
   );
   const byTypeAndCategory = useMemo(() => {
     const map = new Map<
       string,
-      { expense: number; refund: number; salary: number }
+      { expense: number; refund: number; salary: number; obligation: number }
     >();
     for (const tx of filtered) {
       if (!map.has(tx.category))
-        map.set(tx.category, { expense: 0, refund: 0, salary: 0 });
-      map.get(tx.category)![tx.type] += tx.amount;
+        map.set(tx.category, {
+          expense: 0,
+          refund: 0,
+          salary: 0,
+          obligation: 0,
+        });
+      const categoryTotals = map.get(tx.category)!;
+      switch (tx.type) {
+        case "expense":
+          categoryTotals.expense += tx.amount;
+          break;
+        case "refund":
+          categoryTotals.refund += tx.amount;
+          break;
+        case "salary":
+          categoryTotals.salary += tx.amount;
+          break;
+        case "obligation":
+          categoryTotals.obligation += tx.amount;
+          break;
+      }
     }
     return map;
   }, [filtered]);
 
   const categories = Array.from(byTypeAndCategory.keys());
   const expenses = categories.map(
-    (c) => byTypeAndCategory.get(c)?.expense ?? 0
+    (c) => byTypeAndCategory.get(c)?.expense ?? 0,
   );
   const refunds = categories.map((c) => byTypeAndCategory.get(c)?.refund ?? 0);
   const salaries = categories.map((c) => byTypeAndCategory.get(c)?.salary ?? 0);
+  const obligations = categories.map(
+    (c) => byTypeAndCategory.get(c)?.obligation ?? 0,
+  );
 
   const data = {
     labels: categories,
@@ -63,6 +85,12 @@ export const StackedBarChart: FC<Props> = ({ transactions, selectedMonth }) => {
         label: "Stipendi",
         data: salaries,
         backgroundColor: "#3b82f6",
+        stack: "Stack 0",
+      },
+      {
+        label: "Obbligazioni",
+        data: obligations,
+        backgroundColor: "#a855f7",
         stack: "Stack 0",
       },
     ],

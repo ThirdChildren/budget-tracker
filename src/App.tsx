@@ -15,6 +15,7 @@ import {
   Wallet,
   BarChart3,
   Plus,
+  Landmark,
 } from "lucide-react";
 
 import type { Transaction, PaymentMethod } from "./types";
@@ -213,7 +214,11 @@ export default function App() {
   const totalSalary = filtered
     .filter((t) => t.type === "salary")
     .reduce((sum, t) => sum + t.amount, 0);
-  const netBalance = totalSalary + totalRefund - totalExpense;
+  const totalObligations = filtered
+    .filter((t) => t.type === "obligation")
+    .reduce((sum, t) => sum + t.amount, 0);
+  const netBalance =
+    totalSalary + totalRefund + totalObligations - totalExpense;
 
   // Calculate Bitcoin total balance (all-time, not just current month)
   const btcInitialBalanceSats = parseInt(
@@ -225,12 +230,11 @@ export default function App() {
       (t) => t.paymentMethod === "bitcoin" && t.amountSats !== undefined,
     );
     const btcDelta = btcTransactions.reduce((sum, t) => {
-      // For Bitcoin: salary/refund add sats, expenses subtract sats
-      if (t.type === "salary" || t.type === "refund") {
-        return sum + (t.amountSats || 0);
-      } else {
+      // For Bitcoin: all income types add sats, expenses subtract sats
+      if (t.type === "expense") {
         return sum - (t.amountSats || 0);
       }
+      return sum + (t.amountSats || 0);
     }, 0);
     return btcInitialBalanceSats + btcDelta;
   }, [transactions, btcInitialBalanceSats]);
@@ -366,7 +370,7 @@ export default function App() {
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-slide-up">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 lg:gap-5 animate-slide-up">
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 hover:shadow-lg transition-all transform hover:-translate-y-1">
               <div className="flex items-center justify-between">
                 <div>
@@ -416,6 +420,22 @@ export default function App() {
             </div>
 
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 hover:shadow-lg transition-all transform hover:-translate-y-1">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                    Obbligazioni
+                  </p>
+                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">
+                    €{totalObligations.toFixed(2)}
+                  </p>
+                </div>
+                <div className="p-3 bg-gradient-to-br from-purple-100 to-violet-200 dark:from-purple-900/30 dark:to-violet-800/30 rounded-xl">
+                  <Landmark className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 hover:shadow-lg transition-all transform hover:-translate-y-1 sm:col-span-2 xl:col-span-1">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600 dark:text-slate-400">

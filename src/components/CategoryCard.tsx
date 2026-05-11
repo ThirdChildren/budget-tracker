@@ -95,12 +95,14 @@ const transactionTypeLabels = {
   expense: "Spesa",
   refund: "Rimborso",
   salary: "Stipendio",
+  obligation: "Obbligazioni",
 };
 
 const transactionTypeColors = {
   expense: "text-red-600 dark:text-red-400",
   refund: "text-green-600 dark:text-green-400",
   salary: "text-blue-600 dark:text-blue-400",
+  obligation: "text-purple-600 dark:text-purple-400",
 };
 
 export const CategoryCard: FC<Props> = ({

@@ -136,6 +136,7 @@ export const TransactionForm: FC<Props> = ({
     expense: "Spesa",
     refund: "Rimborso",
     salary: "Stipendio",
+    obligation: "Obbligazioni",
   };
 
   const transactionTypeColors = {
@@ -143,6 +144,8 @@ export const TransactionForm: FC<Props> = ({
     refund:
       "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20",
     salary: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20",
+    obligation:
+      "text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20",
   };
 
   return (
@@ -330,13 +333,18 @@ export const TransactionForm: FC<Props> = ({
               className="w-full border border-slate-300 dark:border-slate-600 rounded-xl p-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             >
               <option value="">Seleziona tipo</option>
-              {(["expense", "refund", "salary"] as TransactionType[]).map(
-                (t) => (
-                  <option key={t} value={t}>
-                    {transactionTypeLabels[t]}
-                  </option>
-                ),
-              )}
+              {(
+                [
+                  "expense",
+                  "refund",
+                  "salary",
+                  "obligation",
+                ] as TransactionType[]
+              ).map((t) => (
+                <option key={t} value={t}>
+                  {transactionTypeLabels[t]}
+                </option>
+              ))}
             </select>
             {errors.type && (
               <p className="text-sm text-red-600 dark:text-red-400">

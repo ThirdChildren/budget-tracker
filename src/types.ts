@@ -1,4 +1,4 @@
-export type TransactionType = "expense" | "refund" | "salary";
+export type TransactionType = "expense" | "refund" | "salary" | "obligation";
 export type PaymentMethod = "creditCard" | "bitcoin";
 
 export interface Transaction {
