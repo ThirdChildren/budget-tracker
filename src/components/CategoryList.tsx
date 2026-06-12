@@ -1,5 +1,6 @@
 import { type FC, useMemo } from "react";
 import { CategoryCard } from "./CategoryCard";
+import { Accordion } from "@/components/ui/accordion";
 import type { Transaction, PaymentMethod } from "../types";
 import { BarChart3 } from "lucide-react";
 import React from "react";
@@ -15,10 +16,19 @@ export const CategoryList: FC<Props> = ({
   showInSats,
   paymentMethod,
 }) => {
-  const categories = useMemo(
-    () => Array.from(new Set(transactions.map((t) => t.category))),
-    [transactions],
-  );
+  // Categorie ordinate per totale decrescente + totale spese per le barre di quota
+  const { categories, totalExpenses } = useMemo(() => {
+    const totals = new Map<string, number>();
+    let totalExpenses = 0;
+    for (const t of transactions) {
+      totals.set(t.category, (totals.get(t.category) || 0) + t.amount);
+      if (t.type === "expense") totalExpenses += t.amount;
+    }
+    const categories = Array.from(totals.keys()).sort(
+      (a, b) => Math.abs(totals.get(b)!) - Math.abs(totals.get(a)!),
+    );
+    return { categories, totalExpenses };
+  }, [transactions]);
 
   if (categories.length === 0) {
     return (
@@ -39,7 +49,7 @@ export const CategoryList: FC<Props> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2 xl:grid-cols-3">
+    <Accordion type="single" collapsible className="space-y-3">
       {categories.map((cat) => (
         <CategoryCard
           key={cat}
@@ -47,8 +57,9 @@ export const CategoryList: FC<Props> = ({
           transactions={transactions}
           showInSats={showInSats}
           paymentMethod={paymentMethod}
+          totalExpenses={totalExpenses}
         />
       ))}
-    </div>
+    </Accordion>
   );
 };

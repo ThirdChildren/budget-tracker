@@ -477,35 +477,38 @@ export default function App() {
           </div>
         </div>
 
-        {/* Transaction Form */}
-        <div className="animate-fade-in rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
-          <h2 className="mb-5 flex items-center gap-2.5 text-lg font-bold text-slate-900 dark:text-white sm:text-xl">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
-              <Plus className="h-4 w-4" />
-            </span>
-            Aggiungi Transazioni
-          </h2>
-          <TransactionForm
-            onAdd={handleAdd}
-            descriptions={descriptions}
-            paymentMethod={selectedPaymentMethod}
-            btcPrice={btcPrice}
-          />
-        </div>
+        {/* Form (destra, sticky su desktop) + Categorie (sinistra) */}
+        <div className="grid items-start gap-6 lg:grid-cols-5">
+          {/* Transaction Form */}
+          <div className="animate-fade-in rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6 lg:sticky lg:top-24 lg:order-2 lg:col-span-2 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
+            <h2 className="mb-5 flex items-center gap-2.5 text-lg font-bold text-slate-900 dark:text-white sm:text-xl">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
+                <Plus className="h-4 w-4" />
+              </span>
+              Aggiungi Transazioni
+            </h2>
+            <TransactionForm
+              onAdd={handleAdd}
+              descriptions={descriptions}
+              paymentMethod={selectedPaymentMethod}
+              btcPrice={btcPrice}
+            />
+          </div>
 
-        {/* Category Cards */}
-        <div className="animate-fade-in">
-          <h2 className="mb-4 flex items-center gap-2.5 text-lg font-bold text-slate-900 dark:text-white sm:text-xl">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400">
-              <BarChart3 className="h-4 w-4" />
-            </span>
-            Riepilogo per Categoria
-          </h2>
-          <CategoryList
-            transactions={filtered}
-            showInSats={showInSats}
-            paymentMethod={selectedPaymentMethod}
-          />
+          {/* Category Cards */}
+          <div className="animate-fade-in lg:order-1 lg:col-span-3">
+            <h2 className="mb-4 flex items-center gap-2.5 text-lg font-bold text-slate-900 dark:text-white sm:text-xl">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400">
+                <BarChart3 className="h-4 w-4" />
+              </span>
+              Riepilogo per Categoria
+            </h2>
+            <CategoryList
+              transactions={filtered}
+              showInSats={showInSats}
+              paymentMethod={selectedPaymentMethod}
+            />
+          </div>
         </div>
       </main>
     </div>
