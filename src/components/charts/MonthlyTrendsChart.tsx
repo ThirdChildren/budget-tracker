@@ -140,38 +140,36 @@ export const MonthlyTrendsChart: FC<Props> = ({
 
   return (
     <div
-      className={`bg-gradient-to-br from-white via-purple-50/20 to-pink-50/30 dark:from-slate-800 dark:via-purple-900/10 dark:to-pink-900/10 rounded-3xl shadow-2xl border-2 border-purple-200/50 dark:border-slate-700 p-8 mx-auto flex flex-col items-center relative transition-all duration-300 hover:shadow-purple-500/20 hover:shadow-3xl ${
-        expanded ? "w-full max-w-5xl" : "w-full max-w-3xl"
-      }`}
-      style={{ height: expanded ? 560 : 420 }}
+      className="relative flex h-full w-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6"
+      style={{ minHeight: expanded ? 520 : 380 }}
     >
       <button
-        className="absolute top-5 right-5 p-2.5 rounded-xl hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-100 dark:hover:from-purple-900/50 dark:hover:to-pink-900/50 transition-all hover:scale-110 bg-white/70 dark:bg-slate-800/70 backdrop-blur-md shadow-lg"
+        className="absolute top-4 right-4 rounded-xl border border-slate-200 bg-white p-2 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
         onClick={() => setExpanded((v) => !v)}
         aria-label={expanded ? "Riduci grafico" : "Espandi grafico"}
         title={expanded ? "Riduci grafico" : "Espandi grafico"}
         type="button"
       >
         {expanded ? (
-          <Minimize2 className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+          <Minimize2 className="h-4 w-4" />
         ) : (
-          <Maximize2 className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+          <Maximize2 className="h-4 w-4" />
         )}
       </button>
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-3 bg-gradient-to-br from-purple-500 via-pink-500 to-rose-500 rounded-xl shadow-lg">
-          <div className="text-white text-2xl">📈</div>
-        </div>
+      <div className="mb-4 flex items-center gap-2.5 pr-12">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-base dark:bg-violet-500/10">
+          📈
+        </span>
         <div>
-          <h3 className="text-2xl font-extrabold bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 bg-clip-text text-transparent">
+          <h3 className="text-base font-bold text-slate-900 dark:text-white sm:text-lg">
             Andamento Mensile
           </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
             Visualizza spese, rimborsi e stipendi nel tempo
           </p>
         </div>
       </div>
-      <div className="w-full" style={{ height: expanded ? "400px" : "280px" }}>
+      <div className="w-full flex-1" style={{ height: expanded ? "380px" : "260px" }}>
         <Bar
           key={expanded ? "expanded" : "collapsed"}
           data={data}
@@ -232,7 +230,7 @@ export const MonthlyTrendsChart: FC<Props> = ({
               y: {
                 beginAtZero: true,
                 grid: {
-                  color: "rgba(139, 92, 246, 0.08)",
+                  color: "rgba(100, 116, 139, 0.12)",
                   lineWidth: 1,
                 },
                 border: {

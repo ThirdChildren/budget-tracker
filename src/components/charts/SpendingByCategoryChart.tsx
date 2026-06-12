@@ -64,34 +64,32 @@ export const SpendingByCategoryChart: FC<Props> = ({ transactions }) => {
 
   return (
     <div
-      className={`bg-gradient-to-br from-white to-blue-50/30 dark:from-slate-800 dark:to-slate-800/50 rounded-2xl shadow-xl border-2 border-blue-100 dark:border-slate-700 p-6 mx-auto flex flex-col items-center relative transition-all duration-300 hover:shadow-2xl ${
-        expanded ? "w-full max-w-3xl" : "w-full max-w-md"
-      }`}
-      style={{ height: expanded ? 520 : 380 }}
+      className="relative flex h-full w-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6"
+      style={{ minHeight: expanded ? 520 : 380 }}
     >
       <button
-        className="absolute top-4 right-4 p-2 rounded-xl hover:bg-blue-100 dark:hover:bg-slate-700 transition-all hover:scale-110 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm"
+        className="absolute top-4 right-4 rounded-xl border border-slate-200 bg-white p-2 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
         onClick={() => setExpanded((v) => !v)}
         aria-label={expanded ? "Riduci grafico" : "Espandi grafico"}
         title={expanded ? "Riduci grafico" : "Espandi grafico"}
         type="button"
       >
         {expanded ? (
-          <Minimize2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <Minimize2 className="h-4 w-4" />
         ) : (
-          <Maximize2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <Maximize2 className="h-4 w-4" />
         )}
       </button>
-      <div className="flex items-center gap-2 mb-4">
-        <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg">
-          <div className="text-white text-xl">📊</div>
-        </div>
-        <h3 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+      <div className="mb-4 flex items-center gap-2.5 pr-12">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-base dark:bg-indigo-500/10">
+          📊
+        </span>
+        <h3 className="text-base font-bold text-slate-900 dark:text-white sm:text-lg">
           Spese per Categoria
         </h3>
       </div>
       <div
-        className="w-full flex items-center justify-center"
+        className="flex w-full flex-1 items-center justify-center"
         style={{ height: expanded ? "380px" : "260px" }}
       >
         <Pie

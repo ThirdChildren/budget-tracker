@@ -1,6 +1,6 @@
 import React from "react";
 import type { FC } from "react";
-import { CreditCard, Bitcoin, TrendingUp, Menu, X } from "lucide-react";
+import { CreditCard, Bitcoin, TrendingUp, X } from "lucide-react";
 import type { PaymentMethod } from "../types";
 
 interface Props {
@@ -26,90 +26,73 @@ export const Sidebar: FC<Props> = ({
 }) => {
   return (
     <>
-      {/* Toggle Button - Shown only when sidebar is closed */}
-      {!isOpen && (
-        <button
-          onClick={onToggle}
-          className="fixed bottom-6 left-6 z-50 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-2xl rounded-full p-4 hover:scale-110 transition-all duration-300 group"
-          title="Apri metodi di pagamento"
-        >
-          <Menu size={24} />
-          <span className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 dark:bg-slate-700 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-            Metodo Pagamento
-          </span>
-        </button>
-      )}
-
       {/* Overlay for when sidebar is open */}
       {isOpen && (
-        <div className="fixed inset-0 bg-black/50 z-40" onClick={onToggle} />
+        <div
+          className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm"
+          onClick={onToggle}
+        />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 shadow-xl z-50 transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 z-50 h-full w-full max-w-sm border-r border-slate-200 bg-white shadow-xl transition-transform duration-300 ease-in-out dark:border-slate-800 dark:bg-slate-950 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
-        } w-80`}
+        }`}
       >
-        <div className="flex flex-col h-full p-6">
+        <div className="flex h-full flex-col overflow-y-auto p-5 sm:p-6">
           {/* Header with Close Button */}
-          <div className="mb-8 relative">
-            {/* Close Button */}
+          <div className="mb-6 flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                Metodo di Pagamento
+              </h2>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                Seleziona come gestire le tue transazioni
+              </p>
+            </div>
             <button
               onClick={onToggle}
-              className="absolute -top-2 -right-2 p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-all hover:scale-110"
-              title="Chiudi sidebar"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+              title="Chiudi pannello"
             >
-              <X size={20} className="text-slate-600 dark:text-slate-400" />
+              <X size={18} />
             </button>
-
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2 pr-8">
-              Metodo di Pagamento
-            </h2>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Seleziona come gestire le tue transazioni
-            </p>
           </div>
 
           {/* Payment Method Selection */}
-          <div className="space-y-4 mb-8">
+          <div className="mb-6 space-y-3">
             {/* Credit Card Option */}
             <button
               onClick={() => {
                 onPaymentMethodChange("creditCard");
               }}
-              className={`w-full p-4 rounded-xl border-2 transition-all ${
+              className={`w-full rounded-2xl border p-4 text-left transition-all ${
                 selectedPaymentMethod === "creditCard"
-                  ? "border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 shadow-lg"
-                  : "border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700"
+                  ? "border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500 dark:border-indigo-400 dark:bg-indigo-500/10 dark:ring-indigo-400"
+                  : "border-slate-200 bg-white hover:border-indigo-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-indigo-600"
               }`}
             >
               <div className="flex items-center gap-3">
                 <div
-                  className={`p-3 rounded-lg ${
+                  className={`flex h-11 w-11 items-center justify-center rounded-xl ${
                     selectedPaymentMethod === "creditCard"
-                      ? "bg-blue-500 text-white"
-                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                      ? "bg-indigo-600 text-white"
+                      : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
                   }`}
                 >
-                  <CreditCard size={24} />
+                  <CreditCard size={20} />
                 </div>
-                <div className="text-left flex-1">
-                  <h3
-                    className={`font-semibold ${
-                      selectedPaymentMethod === "creditCard"
-                        ? "text-blue-900 dark:text-blue-100"
-                        : "text-slate-900 dark:text-slate-100"
-                    }`}
-                  >
+                <div className="flex-1">
+                  <h3 className="font-semibold text-slate-900 dark:text-slate-100">
                     Carta di Credito
                   </h3>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     Transazioni in Euro (€)
                   </p>
                 </div>
                 {selectedPaymentMethod === "creditCard" && (
-                  <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-indigo-500" />
                 )}
               </div>
             </button>
@@ -119,38 +102,32 @@ export const Sidebar: FC<Props> = ({
               onClick={() => {
                 onPaymentMethodChange("bitcoin");
               }}
-              className={`w-full p-4 rounded-xl border-2 transition-all ${
+              className={`w-full rounded-2xl border p-4 text-left transition-all ${
                 selectedPaymentMethod === "bitcoin"
-                  ? "border-orange-500 bg-gradient-to-r from-orange-50 to-amber-100 dark:from-orange-900/30 dark:to-amber-800/30 shadow-lg"
-                  : "border-slate-200 dark:border-slate-700 hover:border-orange-300 dark:hover:border-orange-700"
+                  ? "border-orange-500 bg-orange-50 ring-1 ring-orange-500 dark:border-orange-400 dark:bg-orange-500/10 dark:ring-orange-400"
+                  : "border-slate-200 bg-white hover:border-orange-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-orange-600"
               }`}
             >
               <div className="flex items-center gap-3">
                 <div
-                  className={`p-3 rounded-lg ${
+                  className={`flex h-11 w-11 items-center justify-center rounded-xl ${
                     selectedPaymentMethod === "bitcoin"
                       ? "bg-orange-500 text-white"
-                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                      : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
                   }`}
                 >
-                  <Bitcoin size={24} />
+                  <Bitcoin size={20} />
                 </div>
-                <div className="text-left flex-1">
-                  <h3
-                    className={`font-semibold ${
-                      selectedPaymentMethod === "bitcoin"
-                        ? "text-orange-900 dark:text-orange-100"
-                        : "text-slate-900 dark:text-slate-100"
-                    }`}
-                  >
+                <div className="flex-1">
+                  <h3 className="font-semibold text-slate-900 dark:text-slate-100">
                     Bitcoin
                   </h3>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     Transazioni in Satoshi o Euro
                   </p>
                 </div>
                 {selectedPaymentMethod === "bitcoin" && (
-                  <div className="w-3 h-3 rounded-full bg-orange-500 animate-pulse" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-orange-500" />
                 )}
               </div>
             </button>
@@ -158,34 +135,34 @@ export const Sidebar: FC<Props> = ({
 
           {/* Bitcoin Info Section */}
           {selectedPaymentMethod === "bitcoin" && (
-            <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 rounded-xl p-4 border-2 border-orange-200 dark:border-orange-800 animate-fade-in mb-4">
+            <div className="animate-fade-in mb-4 rounded-2xl border border-orange-200 bg-orange-50/60 p-4 dark:border-orange-500/30 dark:bg-orange-500/5">
               {/* Bitcoin Price */}
               <div className="mb-4">
-                <div className="flex items-center gap-2 mb-3">
+                <div className="mb-2 flex items-center gap-2">
                   <TrendingUp
                     className="text-orange-600 dark:text-orange-400"
-                    size={20}
+                    size={18}
                   />
-                  <h3 className="font-semibold text-orange-900 dark:text-orange-100">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                     Prezzo Bitcoin
                   </h3>
                 </div>
                 {isLoading ? (
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-                    <span className="text-sm text-slate-600 dark:text-slate-400">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
+                    <span className="text-sm text-slate-500 dark:text-slate-400">
                       Caricamento...
                     </span>
                   </div>
                 ) : btcPrice ? (
                   <div>
-                    <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+                    <p className="text-2xl font-bold text-slate-900 dark:text-white">
                       €
                       {btcPrice.toLocaleString("it-IT", {
                         maximumFractionDigits: 2,
                       })}
                     </p>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                       1 BTC = 100,000,000 satoshi
                     </p>
                   </div>
@@ -197,23 +174,25 @@ export const Sidebar: FC<Props> = ({
               </div>
 
               {/* Bitcoin Balance */}
-              <div className="pt-4 border-t border-orange-200 dark:border-orange-800">
-                <div className="flex items-center gap-2 mb-3">
+              <div className="border-t border-orange-200 pt-4 dark:border-orange-500/30">
+                <div className="mb-2 flex items-center gap-2">
                   <Bitcoin
                     className="text-orange-600 dark:text-orange-400"
-                    size={20}
+                    size={18}
                   />
-                  <h3 className="font-semibold text-orange-900 dark:text-orange-100">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                     Saldo Totale
                   </h3>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white">
                     {btcBalanceSats.toLocaleString("it-IT")}
-                    <span className="text-base ml-1 font-normal">sats</span>
+                    <span className="ml-1 text-base font-normal text-slate-500 dark:text-slate-400">
+                      sats
+                    </span>
                   </p>
                   {btcPrice && (
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                       ≈ €
                       {((btcBalanceSats / 100000000) * btcPrice).toLocaleString(
                         "it-IT",
@@ -229,11 +208,11 @@ export const Sidebar: FC<Props> = ({
           )}
 
           {/* Info Box */}
-          <div className="mt-auto bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl p-4 border border-purple-200 dark:border-purple-800">
-            <h4 className="text-sm font-semibold text-purple-900 dark:text-purple-100 mb-2">
+          <div className="mt-auto rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+            <h4 className="mb-1.5 text-sm font-semibold text-slate-900 dark:text-slate-100">
               💡 Suggerimento
             </h4>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
+            <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
               {selectedPaymentMethod === "creditCard"
                 ? "Con la carta di credito gestisci tutte le tue transazioni in Euro."
                 : "Con Bitcoin puoi inserire importi in satoshi o euro. Il valore viene salvato in entrambi i formati per tracking preciso."}

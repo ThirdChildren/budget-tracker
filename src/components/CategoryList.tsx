@@ -22,16 +22,16 @@ export const CategoryList: FC<Props> = ({
 
   if (categories.length === 0) {
     return (
-      <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-2xl shadow-lg border-2 border-slate-200 dark:border-slate-700">
-        <div className="flex justify-center mb-4">
-          <div className="p-4 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-full">
-            <BarChart3 className="w-16 h-16 text-blue-600 dark:text-blue-400" />
+      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-12 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="mb-4 flex justify-center">
+          <div className="rounded-full bg-indigo-50 p-4 dark:bg-indigo-500/10">
+            <BarChart3 className="h-10 w-10 text-indigo-500 dark:text-indigo-400" />
           </div>
         </div>
-        <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
+        <h3 className="mb-1.5 text-lg font-semibold text-slate-900 dark:text-slate-100">
           Nessuna categoria
         </h3>
-        <p className="text-slate-600 dark:text-slate-400">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           Aggiungi la tua prima transazione per vedere le categorie
         </p>
       </div>
@@ -39,7 +39,7 @@ export const CategoryList: FC<Props> = ({
   }
 
   return (
-    <div className="grid gap-6 grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2 xl:grid-cols-3">
       {categories.map((cat) => (
         <CategoryCard
           key={cat}

@@ -16,6 +16,8 @@ import {
   BarChart3,
   Plus,
   Landmark,
+  CreditCard,
+  Bitcoin,
 } from "lucide-react";
 
 import type { Transaction, PaymentMethod } from "./types";
@@ -34,6 +36,9 @@ const MonthlyTrendsChart = lazy(() =>
     default: m.MonthlyTrendsChart,
   })),
 );
+
+const btnSecondary =
+  "inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100";
 
 export default function App() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -239,8 +244,42 @@ export default function App() {
     return btcInitialBalanceSats + btcDelta;
   }, [transactions, btcInitialBalanceSats]);
 
+  const summaryCards = [
+    {
+      label: "Spese Totali",
+      value: totalExpense,
+      icon: TrendingDown,
+      iconClass: "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400",
+      valueClass: "text-red-600 dark:text-red-400",
+    },
+    {
+      label: "Rimborsi",
+      value: totalRefund,
+      icon: TrendingUp,
+      iconClass:
+        "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400",
+      valueClass: "text-emerald-600 dark:text-emerald-400",
+    },
+    {
+      label: "Stipendio",
+      value: totalSalary,
+      icon: Wallet,
+      iconClass:
+        "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400",
+      valueClass: "text-blue-600 dark:text-blue-400",
+    },
+    {
+      label: "Obbligazioni",
+      value: totalObligations,
+      icon: Landmark,
+      iconClass:
+        "bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400",
+      valueClass: "text-violet-600 dark:text-violet-400",
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       {/* Sidebar */}
       <Sidebar
         selectedPaymentMethod={selectedPaymentMethod}
@@ -254,252 +293,224 @@ export default function App() {
         btcBalanceSats={btcTotalBalanceSats}
       />
 
-      {/* Main Content */}
-      <div className="flex-1 transition-all duration-300">
-        {/* Header */}
-        <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-              {/* Title and Logo */}
+      {/* Header */}
+      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-3 py-3 lg:flex-row lg:items-center lg:justify-between lg:py-4">
+            {/* Title row */}
+            <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
-                  <Wallet className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
+                  <Wallet className="h-5 w-5" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  <h1 className="text-lg font-bold leading-tight text-slate-900 dark:text-white sm:text-xl">
                     Budget Tracker
                   </h1>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                  <p className="hidden text-xs text-slate-500 dark:text-slate-400 sm:block">
                     Gestisci le tue finanze personali
                   </p>
                 </div>
               </div>
 
-              {/* Controls */}
-              <div className="flex flex-wrap items-center gap-3">
-                {/* Periodo - Design compatto */}
-                <div className="relative group">
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl opacity-0 group-hover:opacity-100 blur transition duration-300"></div>
-                  <div className="relative flex items-center gap-2 bg-white dark:bg-slate-800 rounded-2xl px-4 py-2.5 border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 transition-all">
-                    <Calendar
-                      size={18}
-                      className="text-blue-600 dark:text-blue-400"
-                    />
-                    <input
-                      type="month"
-                      value={selectedMonth}
-                      onChange={(e) => setSelectedMonth(e.target.value)}
-                      className="bg-transparent text-sm font-medium text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer"
-                    />
-                  </div>
-                </div>
+              {/* Payment method pill (always visible, opens panel) */}
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className={`${btnSecondary} shrink-0`}
+                title="Cambia metodo di pagamento"
+              >
+                {selectedPaymentMethod === "bitcoin" ? (
+                  <>
+                    <Bitcoin size={16} className="text-orange-500" />
+                    <span>Bitcoin</span>
+                  </>
+                ) : (
+                  <>
+                    <CreditCard size={16} className="text-indigo-500" />
+                    <span>Carta</span>
+                  </>
+                )}
+              </button>
+            </div>
 
-                {/* Export/Import Buttons - Design moderno */}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={exportJSON}
-                    className="group relative px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl font-medium text-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
-                    title="Esporta JSON"
-                  >
-                    <FileDown size={16} />
-                    <span>JSON</span>
-                  </button>
-                  <button
-                    onClick={exportCSV}
-                    className="group relative px-4 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white rounded-xl font-medium text-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
-                    title="Esporta CSV"
-                  >
-                    <FileDown size={16} />
-                    <span>CSV</span>
-                  </button>
-                  <label
-                    className="group relative px-4 py-2.5 bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white rounded-xl font-medium text-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2 cursor-pointer"
-                    title="Importa file"
-                  >
-                    <Upload size={16} />
-                    <span>Import</span>
-                    <input
-                      type="file"
-                      accept="application/json"
-                      onChange={handleUpload}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-
-                {/* View Charts Button - Design aggiornato */}
-                <button
-                  onClick={() => setShowCharts((v) => !v)}
-                  className={`relative px-5 py-2.5 rounded-xl font-semibold text-sm shadow-lg transition-all duration-300 hover:scale-105 flex items-center gap-2 ${
-                    showCharts
-                      ? "bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white"
-                      : "bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 hover:border-pink-400 dark:hover:border-pink-500 text-slate-900 dark:text-slate-100"
-                  }`}
-                  title={showCharts ? "Nascondi grafici" : "Visualizza grafici"}
-                >
-                  <BarChart3 size={18} />
-                  <span className="hidden md:inline">
-                    {showCharts ? "Nascondi" : "Grafici"}
-                  </span>
-                </button>
+            {/* Controls row */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Month picker */}
+              <div className="flex flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 sm:flex-none">
+                <Calendar
+                  size={16}
+                  className="shrink-0 text-slate-400 dark:text-slate-500"
+                />
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="w-full cursor-pointer bg-transparent text-sm font-medium text-slate-900 focus:outline-none dark:text-slate-100"
+                />
               </div>
+
+              <button
+                onClick={exportJSON}
+                className={btnSecondary}
+                title="Esporta JSON"
+              >
+                <FileDown size={16} />
+                <span>JSON</span>
+              </button>
+              <button
+                onClick={exportCSV}
+                className={btnSecondary}
+                title="Esporta CSV"
+              >
+                <FileDown size={16} />
+                <span>CSV</span>
+              </button>
+              <label className={`${btnSecondary} cursor-pointer`} title="Importa file">
+                <Upload size={16} />
+                <span>Import</span>
+                <input
+                  type="file"
+                  accept="application/json"
+                  onChange={handleUpload}
+                  className="hidden"
+                />
+              </label>
+
+              <button
+                onClick={() => setShowCharts((v) => !v)}
+                className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium shadow-sm transition-colors ${
+                  showCharts
+                    ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                    : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                }`}
+                title={showCharts ? "Nascondi grafici" : "Visualizza grafici"}
+              >
+                <BarChart3 size={16} />
+                <span>{showCharts ? "Nascondi" : "Grafici"}</span>
+              </button>
             </div>
           </div>
-        </header>
+        </div>
+      </header>
 
+      <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         {/* Charts Section */}
         {showCharts && (
-          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
+          <section className="animate-fade-in">
             <Suspense
               fallback={
                 <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
+                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent"></div>
                 </div>
               }
             >
-              <div className="flex flex-col md:flex-row md:gap-6 md:justify-center gap-8">
-                <SpendingByCategoryChart transactions={filtered} />
-                <MonthlyTrendsChart
-                  transactions={transactions}
-                  paymentMethod={selectedPaymentMethod}
-                />
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
+                <div className="xl:col-span-2">
+                  <SpendingByCategoryChart transactions={filtered} />
+                </div>
+                <div className="xl:col-span-3">
+                  <MonthlyTrendsChart
+                    transactions={transactions}
+                    paymentMethod={selectedPaymentMethod}
+                  />
+                </div>
               </div>
             </Suspense>
           </section>
         )}
 
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 lg:gap-5 animate-slide-up">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 hover:shadow-lg transition-all transform hover:-translate-y-1">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                    Spese Totali
-                  </p>
-                  <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">
-                    €{totalExpense.toFixed(2)}
-                  </p>
-                </div>
-                <div className="p-3 bg-gradient-to-br from-red-100 to-red-200 dark:from-red-900/30 dark:to-red-800/30 rounded-xl">
-                  <TrendingDown className="h-6 w-6 text-red-600 dark:text-red-400" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 hover:shadow-lg transition-all transform hover:-translate-y-1">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                    Rimborsi
-                  </p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
-                    €{totalRefund.toFixed(2)}
-                  </p>
-                </div>
-                <div className="p-3 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/30 dark:to-green-800/30 rounded-xl">
-                  <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 hover:shadow-lg transition-all transform hover:-translate-y-1">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                    Stipendio
-                  </p>
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">
-                    €{totalSalary.toFixed(2)}
-                  </p>
-                </div>
-                <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30 rounded-xl">
-                  <Wallet className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 hover:shadow-lg transition-all transform hover:-translate-y-1">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                    Obbligazioni
-                  </p>
-                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">
-                    €{totalObligations.toFixed(2)}
-                  </p>
-                </div>
-                <div className="p-3 bg-gradient-to-br from-purple-100 to-violet-200 dark:from-purple-900/30 dark:to-violet-800/30 rounded-xl">
-                  <Landmark className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 hover:shadow-lg transition-all transform hover:-translate-y-1 sm:col-span-2 xl:col-span-1">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                    Saldo Netto
+        {/* Summary Cards */}
+        <div className="grid animate-slide-up grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5">
+          {summaryCards.map(({ label, value, icon: Icon, iconClass, valueClass }) => (
+            <div
+              key={label}
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-900 sm:p-5"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400 sm:text-sm">
+                    {label}
                   </p>
                   <p
-                    className={`text-2xl font-bold mt-1 ${
-                      netBalance >= 0
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-red-600 dark:text-red-400"
-                    }`}
+                    className={`mt-1 truncate text-lg font-bold sm:text-2xl ${valueClass}`}
                   >
-                    €{netBalance.toFixed(2)}
+                    €{value.toFixed(2)}
                   </p>
                 </div>
                 <div
-                  className={`p-3 rounded-xl ${
-                    netBalance >= 0
-                      ? "bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/30 dark:to-green-800/30"
-                      : "bg-gradient-to-br from-red-100 to-red-200 dark:from-red-900/30 dark:to-red-800/30"
-                  }`}
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 ${iconClass}`}
                 >
-                  {netBalance >= 0 ? (
-                    <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
-                  ) : (
-                    <TrendingDown className="h-6 w-6 text-red-600 dark:text-red-400" />
-                  )}
+                  <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
               </div>
             </div>
-          </div>
+          ))}
 
-          {/* Transaction Form */}
-          <div className="bg-gradient-to-br from-white to-blue-50/30 dark:from-slate-800 dark:to-slate-800/50 rounded-2xl shadow-lg border-2 border-blue-100 dark:border-slate-700 p-8 animate-fade-in">
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-6 flex items-center gap-2">
-              <div className="p-2 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-lg">
-                <Plus className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+          {/* Net balance */}
+          <div className="col-span-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-900 sm:p-5 xl:col-span-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400 sm:text-sm">
+                  Saldo Netto
+                </p>
+                <p
+                  className={`mt-1 truncate text-lg font-bold sm:text-2xl ${
+                    netBalance >= 0
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-red-600 dark:text-red-400"
+                  }`}
+                >
+                  €{netBalance.toFixed(2)}
+                </p>
               </div>
-              Aggiungi Transazioni
-            </h2>
-            <TransactionForm
-              onAdd={handleAdd}
-              descriptions={descriptions}
-              paymentMethod={selectedPaymentMethod}
-              btcPrice={btcPrice}
-            />
+              <div
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 ${
+                  netBalance >= 0
+                    ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+                    : "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400"
+                }`}
+              >
+                {netBalance >= 0 ? (
+                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5" />
+                )}
+              </div>
+            </div>
           </div>
+        </div>
 
-          {/* Category Cards */}
-          <div className="animate-fade-in">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6 flex items-center gap-2">
-              <div className="p-2 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-lg">
-                <BarChart3 className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              Riepilogo per Categoria
-            </h2>
-            <CategoryList
-              transactions={filtered}
-              showInSats={showInSats}
-              paymentMethod={selectedPaymentMethod}
-            />
-          </div>
-        </main>
-      </div>
+        {/* Transaction Form */}
+        <div className="animate-fade-in rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+          <h2 className="mb-5 flex items-center gap-2.5 text-lg font-bold text-slate-900 dark:text-white sm:text-xl">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
+              <Plus className="h-4 w-4" />
+            </span>
+            Aggiungi Transazioni
+          </h2>
+          <TransactionForm
+            onAdd={handleAdd}
+            descriptions={descriptions}
+            paymentMethod={selectedPaymentMethod}
+            btcPrice={btcPrice}
+          />
+        </div>
+
+        {/* Category Cards */}
+        <div className="animate-fade-in">
+          <h2 className="mb-4 flex items-center gap-2.5 text-lg font-bold text-slate-900 dark:text-white sm:text-xl">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400">
+              <BarChart3 className="h-4 w-4" />
+            </span>
+            Riepilogo per Categoria
+          </h2>
+          <CategoryList
+            transactions={filtered}
+            showInSats={showInSats}
+            paymentMethod={selectedPaymentMethod}
+          />
+        </div>
+      </main>
     </div>
   );
 }

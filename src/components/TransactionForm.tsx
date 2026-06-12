@@ -23,6 +23,12 @@ interface Props {
   btcPrice: number | null;
 }
 
+const inputClass =
+  "w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-slate-900 transition-colors placeholder:text-slate-400 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-indigo-500 dark:focus:bg-slate-800";
+
+const labelClass =
+  "flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300";
+
 export const TransactionForm: FC<Props> = ({
   onAdd,
   descriptions,
@@ -140,36 +146,36 @@ export const TransactionForm: FC<Props> = ({
   };
 
   const transactionTypeColors = {
-    expense: "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20",
+    expense: "text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10",
     refund:
-      "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20",
-    salary: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20",
+      "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10",
+    salary: "text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10",
     obligation:
-      "text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20",
+      "text-violet-700 dark:text-violet-400 bg-violet-50 dark:bg-violet-500/10",
   };
 
   return (
-    <div className="space-y-6">
-      <form onSubmit={handleSubmit(onAddToPending)} className="space-y-6">
-        {/* Date Section - More prominent */}
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-4 border-2 border-blue-200 dark:border-blue-800">
-          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-            <Calendar className="inline w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
+    <div className="space-y-5">
+      <form onSubmit={handleSubmit(onAddToPending)} className="space-y-5">
+        {/* Date Section */}
+        <div className="space-y-2">
+          <label className={labelClass}>
+            <Calendar className="h-4 w-4 text-indigo-500" />
             Data delle Transazioni
           </label>
           <input
             type="date"
             {...register("date", { required: "La data è obbligatoria" })}
-            className="w-full border-2 border-blue-300 dark:border-blue-600 rounded-xl p-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
+            className={`${inputClass} sm:max-w-xs`}
           />
           {errors.date && (
-            <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+            <p className="text-sm text-red-600 dark:text-red-400">
               {errors.date.message}
             </p>
           )}
           {selectedDate && (
-            <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 flex items-center gap-1">
-              <Check className="w-3 h-3" />
+            <p className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400">
+              <Check className="h-3 w-3" />
               Aggiungi più transazioni per la data{" "}
               {new Date(selectedDate + "T00:00").toLocaleDateString("it-IT")}
             </p>
@@ -177,10 +183,10 @@ export const TransactionForm: FC<Props> = ({
         </div>
 
         {/* Transaction Details */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-              <FileText className="inline w-4 h-4 mr-2" />
+            <label className={labelClass}>
+              <FileText className="h-4 w-4 text-slate-400" />
               Descrizione
             </label>
             <input
@@ -189,7 +195,7 @@ export const TransactionForm: FC<Props> = ({
               {...register("description", {
                 required: "La descrizione è obbligatoria",
               })}
-              className="w-full border border-slate-300 dark:border-slate-600 rounded-xl p-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className={inputClass}
             />
             <datalist id="descs">
               {descriptions.map((d) => (
@@ -204,15 +210,15 @@ export const TransactionForm: FC<Props> = ({
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-              <Tag className="inline w-4 h-4 mr-2" />
+            <label className={labelClass}>
+              <Tag className="h-4 w-4 text-slate-400" />
               Categoria
             </label>
             <select
               {...register("category", {
                 required: "La categoria è obbligatoria",
               })}
-              className="w-full border border-slate-300 dark:border-slate-600 rounded-xl p-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className={inputClass}
             >
               <option value="">Seleziona categoria</option>
               {[
@@ -241,27 +247,27 @@ export const TransactionForm: FC<Props> = ({
         </div>
 
         {/* Amount and Type */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+            <label className={labelClass}>
               {paymentMethod === "bitcoin" ? (
-                <Bitcoin className="inline w-4 h-4 mr-2" />
+                <Bitcoin className="h-4 w-4 text-orange-500" />
               ) : (
-                <DollarSign className="inline w-4 h-4 mr-2" />
+                <DollarSign className="h-4 w-4 text-slate-400" />
               )}
               Importo
             </label>
 
             {/* Bitcoin: Toggle EUR/SATS */}
             {paymentMethod === "bitcoin" && (
-              <div className="flex gap-2 mb-2">
+              <div className="flex rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800">
                 <button
                   type="button"
                   onClick={() => setAmountUnit("eur")}
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                  className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                     amountUnit === "eur"
-                      ? "bg-orange-500 text-white shadow-md"
-                      : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600"
+                      ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white"
+                      : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                   }`}
                 >
                   € Euro
@@ -269,10 +275,10 @@ export const TransactionForm: FC<Props> = ({
                 <button
                   type="button"
                   onClick={() => setAmountUnit("sats")}
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                  className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                     amountUnit === "sats"
-                      ? "bg-orange-500 text-white shadow-md"
-                      : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600"
+                      ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white"
+                      : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                   }`}
                 >
                   ₿ Satoshi
@@ -282,6 +288,7 @@ export const TransactionForm: FC<Props> = ({
 
             <input
               type="number"
+              inputMode="decimal"
               step={
                 paymentMethod === "creditCard"
                   ? "0.01"
@@ -303,12 +310,12 @@ export const TransactionForm: FC<Props> = ({
                   message: "L'importo deve essere maggiore di 0",
                 },
               })}
-              className="w-full border border-slate-300 dark:border-slate-600 rounded-xl p-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className={inputClass}
             />
 
             {/* Conversion preview for Bitcoin */}
             {paymentMethod === "bitcoin" && currentAmount && btcPrice && (
-              <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+              <p className="text-xs text-orange-600 dark:text-orange-400">
                 ≈{" "}
                 {amountUnit === "eur"
                   ? `${convertedAmount()} sats`
@@ -324,13 +331,13 @@ export const TransactionForm: FC<Props> = ({
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-              <ArrowUpDown className="inline w-4 h-4 mr-2" />
+            <label className={labelClass}>
+              <ArrowUpDown className="h-4 w-4 text-slate-400" />
               Tipo
             </label>
             <select
               {...register("type", { required: "Il tipo è obbligatorio" })}
-              className="w-full border border-slate-300 dark:border-slate-600 rounded-xl p-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className={inputClass}
             >
               <option value="">Seleziona tipo</option>
               {(
@@ -355,12 +362,12 @@ export const TransactionForm: FC<Props> = ({
         </div>
 
         {/* Add Button */}
-        <div className="flex justify-end">
+        <div className="flex justify-stretch sm:justify-end">
           <Button
             type="submit"
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+            className="w-full rounded-xl bg-indigo-600 px-6 py-3 text-white shadow-sm transition-colors hover:bg-indigo-700 sm:w-auto"
           >
-            <ListPlus className="w-5 h-5" />
+            <ListPlus className="h-5 w-5" />
             {pendingTransactions.length > 0
               ? "Aggiungi Altra"
               : "Aggiungi Transazione"}
@@ -370,46 +377,46 @@ export const TransactionForm: FC<Props> = ({
 
       {/* Pending Transactions List */}
       {pendingTransactions.length > 0 && (
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-6 border-2 border-amber-200 dark:border-amber-800 animate-fade-in">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <ListPlus className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-              Transazioni in Attesa ({pendingTransactions.length})
+        <div className="animate-fade-in rounded-2xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-500/30 dark:bg-amber-500/5 sm:p-5">
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <h3 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-slate-100 sm:text-lg">
+              <ListPlus className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              In Attesa ({pendingTransactions.length})
             </h3>
             <Button
               variant="ghost"
               size="sm"
               onClick={clearAll}
-              className="text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400"
+              className="text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400"
             >
-              <X className="w-4 h-4 mr-1" />
+              <X className="mr-1 h-4 w-4" />
               Cancella Tutto
             </Button>
           </div>
 
-          <div className="space-y-3 mb-4">
+          <div className="mb-4 space-y-2.5">
             {pendingTransactions.map((tx, idx) => (
               <div
                 key={idx}
-                className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow"
+                className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900 sm:p-4"
               >
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1.5 flex flex-wrap items-center gap-2">
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                         transactionTypeColors[tx.type]
                       }`}
                     >
                       {transactionTypeLabels[tx.type]}
                     </span>
-                    <span className="text-slate-600 dark:text-slate-400 text-sm">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
                       {new Date(tx.date + "T00:00").toLocaleDateString("it-IT")}
                     </span>
                   </div>
-                  <div className="text-slate-900 dark:text-slate-100 font-medium">
+                  <div className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
                     {tx.description}
                   </div>
-                  <div className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                  <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                     {tx.category} •
                     {tx.paymentMethod === "bitcoin" && tx.amountSats
                       ? ` ${tx.amountSats.toLocaleString()} sats (€${Number(
@@ -422,9 +429,9 @@ export const TransactionForm: FC<Props> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => removePending(idx)}
-                  className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 ml-4"
+                  className="shrink-0 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="h-5 w-5" />
                 </Button>
               </div>
             ))}
@@ -432,9 +439,9 @@ export const TransactionForm: FC<Props> = ({
 
           <Button
             onClick={saveAllTransactions}
-            className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 font-semibold"
+            className="w-full rounded-xl bg-emerald-600 py-3 font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700"
           >
-            <Save className="w-5 h-5" />
+            <Save className="h-5 w-5" />
             Salva Tutte le Transazioni ({pendingTransactions.length})
           </Button>
         </div>
