@@ -16,8 +16,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          // Separare Chart.js in un chunk dedicato
-          chart: ["chart.js", "react-chartjs-2"],
+          // Separare la libreria grafici in un chunk dedicato
+          chart: ["recharts"],
           // Separare le icone in un chunk dedicato
           icons: ["lucide-react"],
           // Separare le utilities in un chunk dedicato

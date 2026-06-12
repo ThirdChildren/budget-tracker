@@ -1,18 +1,17 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import type { FC } from "react";
-import { Bar } from "react-chartjs-2";
 import {
-  Chart,
-  BarElement,
-  CategoryScale,
-  LinearScale,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
   Tooltip,
   Legend,
-} from "chart.js";
-import { Maximize2, Minimize2 } from "lucide-react";
+  ResponsiveContainer,
+} from "recharts";
+import { MoveDiagonal2 } from "lucide-react";
 import type { Transaction, PaymentMethod } from "../../types";
-
-Chart.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 interface Props {
   transactions: Transaction[];
@@ -24,18 +23,53 @@ function getMonthLabel(date: string) {
   return `${month}/${year.slice(2)}`;
 }
 
+const SERIES = [
+  { key: "expense", name: "Spese", color: "#ef4444" },
+  { key: "refund", name: "Rimborsi", color: "#10b981" },
+  { key: "salary", name: "Stipendi", color: "#3b82f6" },
+  { key: "obligation", name: "Obbligazioni", color: "#8b5cf6" },
+] as const;
+
+const BarTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  const total = payload.reduce(
+    (sum: number, p: any) => sum + (Number(p.value) || 0),
+    0,
+  );
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+      <p className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+        {label}
+      </p>
+      {payload.map((p: any) => (
+        <p
+          key={p.dataKey}
+          className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300"
+        >
+          <span
+            className="h-2 w-2 shrink-0 rounded-full"
+            style={{ backgroundColor: p.color }}
+          />
+          {p.name}: €{Number(p.value).toFixed(2)}
+        </p>
+      ))}
+      <p className="mt-1.5 border-t border-slate-200 pt-1 text-xs font-semibold text-slate-900 dark:border-slate-700 dark:text-slate-100">
+        Totale: €{total.toFixed(2)}
+      </p>
+    </div>
+  );
+};
+
 export const MonthlyTrendsChart: FC<Props> = ({
   transactions,
   paymentMethod,
 }) => {
-  const [expanded, setExpanded] = useState(false);
-  // Raggruppa per mese (YYYY-MM)
-  const dataByMonth = useMemo(() => {
+  // Raggruppa per mese (YYYY-MM), filtrando per metodo di pagamento
+  const rows = useMemo(() => {
     const map = new Map<
       string,
       { expense: number; refund: number; salary: number; obligation: number }
     >();
-    // Filtra le transazioni in base al metodo di pagamento selezionato
     const filteredTransactions = transactions.filter(
       (tx) => !tx.paymentMethod || tx.paymentMethod === paymentMethod,
     );
@@ -43,120 +77,19 @@ export const MonthlyTrendsChart: FC<Props> = ({
       const ym = tx.date.slice(0, 7);
       if (!map.has(ym))
         map.set(ym, { expense: 0, refund: 0, salary: 0, obligation: 0 });
-      const monthTotals = map.get(ym)!;
-      switch (tx.type) {
-        case "expense":
-          monthTotals.expense += tx.amount;
-          break;
-        case "refund":
-          monthTotals.refund += tx.amount;
-          break;
-        case "salary":
-          monthTotals.salary += tx.amount;
-          break;
-        case "obligation":
-          monthTotals.obligation += tx.amount;
-          break;
-      }
+      map.get(ym)![tx.type] += tx.amount;
     }
-    return map;
+    return Array.from(map.keys())
+      .sort()
+      .map((ym) => ({ month: getMonthLabel(ym), ...map.get(ym)! }));
   }, [transactions, paymentMethod]);
-
-  const labels = Array.from(dataByMonth.keys()).sort();
-  const expenses = labels.map((m) => dataByMonth.get(m)?.expense ?? 0);
-  const refunds = labels.map((m) => dataByMonth.get(m)?.refund ?? 0);
-  const salaries = labels.map((m) => dataByMonth.get(m)?.salary ?? 0);
-  const obligations = labels.map((m) => dataByMonth.get(m)?.obligation ?? 0);
-
-  const data = {
-    labels: labels.map(getMonthLabel),
-    datasets: [
-      {
-        label: "Spese",
-        data: expenses,
-        backgroundColor: (context: any) => {
-          const ctx = context.chart.ctx;
-          const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-          gradient.addColorStop(0, "rgba(239, 68, 68, 0.9)");
-          gradient.addColorStop(1, "rgba(239, 68, 68, 0.3)");
-          return gradient;
-        },
-        borderColor: "rgb(239, 68, 68)",
-        borderWidth: 3,
-        borderRadius: 10,
-        hoverBackgroundColor: "rgba(239, 68, 68, 1)",
-        hoverBorderWidth: 4,
-      },
-      {
-        label: "Rimborsi",
-        data: refunds,
-        backgroundColor: (context: any) => {
-          const ctx = context.chart.ctx;
-          const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-          gradient.addColorStop(0, "rgba(34, 197, 94, 0.9)");
-          gradient.addColorStop(1, "rgba(34, 197, 94, 0.3)");
-          return gradient;
-        },
-        borderColor: "rgb(34, 197, 94)",
-        borderWidth: 3,
-        borderRadius: 10,
-        hoverBackgroundColor: "rgba(34, 197, 94, 1)",
-        hoverBorderWidth: 4,
-      },
-      {
-        label: "Stipendi",
-        data: salaries,
-        backgroundColor: (context: any) => {
-          const ctx = context.chart.ctx;
-          const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-          gradient.addColorStop(0, "rgba(59, 130, 246, 0.9)");
-          gradient.addColorStop(1, "rgba(59, 130, 246, 0.3)");
-          return gradient;
-        },
-        borderColor: "rgb(59, 130, 246)",
-        borderWidth: 3,
-        borderRadius: 10,
-        hoverBackgroundColor: "rgba(59, 130, 246, 1)",
-        hoverBorderWidth: 4,
-      },
-      {
-        label: "Obbligazioni",
-        data: obligations,
-        backgroundColor: (context: any) => {
-          const ctx = context.chart.ctx;
-          const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-          gradient.addColorStop(0, "rgba(168, 85, 247, 0.9)");
-          gradient.addColorStop(1, "rgba(168, 85, 247, 0.3)");
-          return gradient;
-        },
-        borderColor: "rgb(168, 85, 247)",
-        borderWidth: 3,
-        borderRadius: 10,
-        hoverBackgroundColor: "rgba(168, 85, 247, 1)",
-        hoverBorderWidth: 4,
-      },
-    ],
-  };
 
   return (
     <div
-      className="relative flex h-full w-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6"
-      style={{ minHeight: expanded ? 520 : 380 }}
+      className="relative flex h-[340px] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-5 xl:h-[400px] xl:w-[680px] xl:min-h-[320px] xl:min-w-[420px] xl:max-w-full xl:resize"
+      title="Trascina l'angolo in basso a destra per ridimensionare"
     >
-      <button
-        className="absolute top-4 right-4 rounded-xl border border-slate-200 bg-white p-2 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-        onClick={() => setExpanded((v) => !v)}
-        aria-label={expanded ? "Riduci grafico" : "Espandi grafico"}
-        title={expanded ? "Riduci grafico" : "Espandi grafico"}
-        type="button"
-      >
-        {expanded ? (
-          <Minimize2 className="h-4 w-4" />
-        ) : (
-          <Maximize2 className="h-4 w-4" />
-        )}
-      </button>
-      <div className="mb-4 flex items-center gap-2.5 pr-12">
+      <div className="mb-2 flex items-center gap-2.5">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-base dark:bg-violet-500/10">
           📈
         </span>
@@ -169,114 +102,63 @@ export const MonthlyTrendsChart: FC<Props> = ({
           </p>
         </div>
       </div>
-      <div className="w-full flex-1" style={{ height: expanded ? "380px" : "260px" }}>
-        <Bar
-          key={expanded ? "expanded" : "collapsed"}
-          data={data}
-          options={{
-            plugins: {
-              legend: {
-                position: "bottom",
-                labels: {
-                  padding: expanded ? 20 : 10,
-                  font: {
-                    size: expanded ? 13 : 11,
-                    weight: 600,
-                    family: "'Inter', sans-serif",
-                  },
-                  usePointStyle: true,
-                  pointStyle: "rectRounded",
-                  boxWidth: expanded ? 12 : 10,
-                  boxHeight: expanded ? 12 : 10,
-                },
-              },
-              tooltip: {
-                backgroundColor: "rgba(0, 0, 0, 0.85)",
-                padding: 16,
-                cornerRadius: 12,
-                titleFont: {
-                  size: 15,
-                  weight: "bold",
-                },
-                bodyFont: {
-                  size: 14,
-                },
-                displayColors: true,
-                borderColor: "rgba(255, 255, 255, 0.1)",
-                borderWidth: 1,
-                callbacks: {
-                  label: (context) => {
-                    const label = context.dataset.label || "";
-                    const value = context.parsed.y || 0;
-                    return ` ${label}: €${value.toFixed(2)}`;
-                  },
-                  footer: (items) => {
-                    const total = items.reduce(
-                      (sum, item) => sum + (item.parsed.y || 0),
-                      0,
-                    );
-                    return `\nTotale: €${total.toFixed(2)}`;
-                  },
-                },
-              },
-            },
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-              mode: "index",
-              intersect: false,
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                grid: {
-                  color: "rgba(100, 116, 139, 0.12)",
-                  lineWidth: 1,
-                },
-                border: {
-                  display: false,
-                },
-                ticks: {
-                  callback: (value) => `€${value}`,
-                  font: {
-                    size: 12,
-                    weight: 500,
-                  },
-                  color: "rgba(100, 116, 139, 0.8)",
-                  padding: 8,
-                },
-              },
-              x: {
-                grid: {
-                  display: false,
-                },
-                border: {
-                  display: false,
-                },
-                ticks: {
-                  font: {
-                    size: 12,
-                    weight: 600,
-                  },
-                  color: "rgba(100, 116, 139, 0.9)",
-                  padding: 8,
-                },
-              },
-            },
-            animation: {
-              duration: 1500,
-              easing: "easeInOutCubic",
-              delay: (context) => {
-                let delay = 0;
-                if (context.type === "data" && context.mode === "default") {
-                  delay = context.dataIndex * 100;
-                }
-                return delay;
-              },
-            },
-          }}
-        />
+
+      <div className="min-h-0 flex-1">
+        {rows.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-sm text-slate-500 dark:text-slate-400">
+            Nessuna transazione da visualizzare
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                vertical={false}
+                stroke="rgba(148, 163, 184, 0.25)"
+              />
+              <XAxis
+                dataKey="month"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "#94a3b8", fontSize: 12 }}
+              />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "#94a3b8", fontSize: 12 }}
+                tickFormatter={(v: number) => `€${v}`}
+                width={56}
+              />
+              <Tooltip
+                content={<BarTooltip />}
+                cursor={{ fill: "rgba(148, 163, 184, 0.1)" }}
+              />
+              <Legend
+                iconType="circle"
+                iconSize={8}
+                formatter={(value: string) => (
+                  <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                    {value}
+                  </span>
+                )}
+              />
+              {SERIES.map((s) => (
+                <Bar
+                  key={s.key}
+                  dataKey={s.key}
+                  name={s.name}
+                  fill={s.color}
+                  radius={[5, 5, 0, 0]}
+                  maxBarSize={28}
+                />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
+
+      {/* Resize hint (desktop only) */}
+      <MoveDiagonal2 className="pointer-events-none absolute bottom-1.5 right-1.5 hidden h-3.5 w-3.5 text-slate-300 dark:text-slate-600 xl:block" />
     </div>
   );
 };

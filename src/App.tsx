@@ -404,16 +404,13 @@ export default function App() {
                 </div>
               }
             >
-              <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
-                <div className="xl:col-span-2">
-                  <SpendingByCategoryChart transactions={filtered} />
-                </div>
-                <div className="xl:col-span-3">
-                  <MonthlyTrendsChart
-                    transactions={transactions}
-                    paymentMethod={selectedPaymentMethod}
-                  />
-                </div>
+              {/* flex-wrap: i grafici sono ridimensionabili col mouse su desktop */}
+              <div className="flex flex-col gap-4 xl:flex-row xl:flex-wrap xl:items-start">
+                <SpendingByCategoryChart transactions={filtered} />
+                <MonthlyTrendsChart
+                  transactions={transactions}
+                  paymentMethod={selectedPaymentMethod}
+                />
               </div>
             </Suspense>
           </section>
