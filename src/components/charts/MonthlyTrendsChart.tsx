@@ -1,164 +1,120 @@
-import React, { useMemo } from "react";
-import type { FC } from "react";
+import { useMemo, type FC } from "react";
 import {
-  BarChart,
+  ComposedChart,
   Bar,
+  Line,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
-import { MoveDiagonal2 } from "lucide-react";
-import type { Transaction, PaymentMethod } from "../../types";
+import { formatMonth, shiftMonth } from "@/lib/format";
+import { useMoney } from "@/lib/money";
+import { computeTotals } from "@/lib/stats";
+import type { Transaction } from "../../types";
+import { chartColors, ChartTooltipBox } from "./chartTheme";
 
 interface Props {
-  transactions: Transaction[];
-  paymentMethod: PaymentMethod;
+  transactions: Transaction[]; // già filtrate per metodo di pagamento
+  selectedMonth: string;
+  onSelectMonth: (m: string) => void;
+  dark: boolean;
 }
 
-function getMonthLabel(date: string) {
-  const [year, month] = date.split("-");
-  return `${month}/${year.slice(2)}`;
-}
-
-const SERIES = [
-  { key: "expense", name: "Spese", color: "#ef4444" },
-  { key: "refund", name: "Rimborsi", color: "#10b981" },
-  { key: "salary", name: "Stipendi", color: "#3b82f6" },
-  { key: "obligation", name: "Obbligazioni", color: "#8b5cf6" },
-] as const;
-
-const BarTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
-  const total = payload.reduce(
-    (sum: number, p: any) => sum + (Number(p.value) || 0),
-    0,
-  );
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
-      <p className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
-        {label}
-      </p>
-      {payload.map((p: any) => (
-        <p
-          key={p.dataKey}
-          className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300"
-        >
-          <span
-            className="h-2 w-2 shrink-0 rounded-full"
-            style={{ backgroundColor: p.color }}
-          />
-          {p.name}: €{Number(p.value).toFixed(2)}
-        </p>
-      ))}
-      <p className="mt-1.5 border-t border-slate-200 pt-1 text-xs font-semibold text-slate-900 dark:border-slate-700 dark:text-slate-100">
-        Totale: €{total.toFixed(2)}
-      </p>
-    </div>
-  );
-};
+const MONTHS = 12;
 
 export const MonthlyTrendsChart: FC<Props> = ({
   transactions,
-  paymentMethod,
+  selectedMonth,
+  onSelectMonth,
+  dark,
 }) => {
-  // Raggruppa per mese (YYYY-MM), filtrando per metodo di pagamento
+  const c = chartColors(dark);
+  const { value, format, formatCompact } = useMoney();
+
+  // Ultimi 12 mesi fino al mese selezionato, anche se vuoti
   const rows = useMemo(() => {
-    const map = new Map<
-      string,
-      { expense: number; refund: number; salary: number; obligation: number }
-    >();
-    const filteredTransactions = transactions.filter(
-      (tx) => !tx.paymentMethod || tx.paymentMethod === paymentMethod,
-    );
-    for (const tx of filteredTransactions) {
+    const byMonth = new Map<string, Transaction[]>();
+    for (const tx of transactions) {
       const ym = tx.date.slice(0, 7);
-      if (!map.has(ym))
-        map.set(ym, { expense: 0, refund: 0, salary: 0, obligation: 0 });
-      map.get(ym)![tx.type] += tx.amount;
+      if (!byMonth.has(ym)) byMonth.set(ym, []);
+      byMonth.get(ym)!.push(tx);
     }
-    return Array.from(map.keys())
-      .sort()
-      .map((ym) => ({ month: getMonthLabel(ym), ...map.get(ym)! }));
-  }, [transactions, paymentMethod]);
+    return Array.from({ length: MONTHS }, (_, i) => {
+      const ym = shiftMonth(selectedMonth, i - MONTHS + 1);
+      const t = computeTotals(byMonth.get(ym) ?? [], value);
+      return { ym, label: formatMonth(ym, { short: true }), income: t.income, expense: t.expense, net: t.net };
+    });
+  }, [transactions, selectedMonth, value]);
+
+  const hasData = rows.some((r) => r.income || r.expense);
 
   return (
-    <div
-      className="relative flex h-[340px] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-5 xl:h-[400px] xl:w-[680px] xl:min-h-[320px] xl:min-w-[420px] xl:max-w-full xl:resize"
-      title="Trascina l'angolo in basso a destra per ridimensionare"
-    >
-      <div className="mb-2 flex items-center gap-2.5">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-base dark:bg-violet-500/10">
-          📈
-        </span>
+    <section className="card animate-rise p-5 sm:p-6" style={{ animationDelay: "80ms" }}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-base font-bold text-slate-900 dark:text-white sm:text-lg">
-            Andamento Mensile
-          </h3>
-          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-            Visualizza spese, rimborsi e stipendi nel tempo
-          </p>
+          <h3 className="text-base font-bold">Andamento mensile</h3>
+          <p className="text-xs text-subtle">Clicca su un mese per selezionarlo</p>
+        </div>
+        <div className="flex gap-3 text-xs font-semibold text-subtle">
+          <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: c.income }} />Entrate</span>
+          <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: c.expense }} />Uscite</span>
+          <span className="flex items-center gap-1.5"><span className="h-0.5 w-3 rounded-full" style={{ background: c.accent }} />Saldo</span>
         </div>
       </div>
 
-      <div className="min-h-0 flex-1">
-        {rows.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-sm text-slate-500 dark:text-slate-400">
+      <div className="mt-4 h-72">
+        {!hasData ? (
+          <div className="flex h-full items-center justify-center text-sm text-subtle">
             Nessuna transazione da visualizzare
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                vertical={false}
-                stroke="rgba(148, 163, 184, 0.25)"
-              />
-              <XAxis
-                dataKey="month"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "#94a3b8", fontSize: 12 }}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "#94a3b8", fontSize: 12 }}
-                tickFormatter={(v: number) => `€${v}`}
-                width={56}
-              />
+            <ComposedChart
+              data={rows}
+              margin={{ top: 8, right: 4, left: 0, bottom: 0 }}
+              barGap={3}
+              onClick={(state) => {
+                const i = Number(state?.activeTooltipIndex);
+                if (!Number.isNaN(i) && rows[i]) onSelectMonth(rows[i].ym);
+              }}
+              style={{ cursor: "pointer" }}
+            >
+              <CartesianGrid vertical={false} stroke={c.grid} />
+              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: c.tick, fontSize: 11 }} interval="preserveStartEnd" />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: c.tick, fontSize: 11 }} tickFormatter={(v: number) => formatCompact(v)} width={60} />
               <Tooltip
-                content={<BarTooltip />}
-                cursor={{ fill: "rgba(148, 163, 184, 0.1)" }}
+                cursor={{ fill: c.grid, radius: 8 }}
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const r = payload[0].payload as (typeof rows)[number];
+                  return (
+                    <ChartTooltipBox>
+                      <p className="mb-1.5 text-sm font-bold">{formatMonth(r.ym)}</p>
+                      <p className="flex justify-between gap-6"><span className="text-subtle">Entrate</span><span className="font-semibold tabular" style={{ color: c.income }}>{format(r.income)}</span></p>
+                      <p className="flex justify-between gap-6"><span className="text-subtle">Uscite</span><span className="font-semibold tabular" style={{ color: c.expense }}>{format(r.expense)}</span></p>
+                      <p className="mt-1 flex justify-between gap-6 border-t border-line pt-1"><span className="font-semibold">Saldo</span><span className="font-bold tabular">{format(r.net)}</span></p>
+                    </ChartTooltipBox>
+                  );
+                }}
               />
-              <Legend
-                iconType="circle"
-                iconSize={8}
-                formatter={(value: string) => (
-                  <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                    {value}
-                  </span>
-                )}
-              />
-              {SERIES.map((s) => (
-                <Bar
-                  key={s.key}
-                  dataKey={s.key}
-                  name={s.name}
-                  fill={s.color}
-                  radius={[5, 5, 0, 0]}
-                  maxBarSize={28}
-                />
-              ))}
-            </BarChart>
+              <Bar dataKey="income" radius={[6, 6, 2, 2]} maxBarSize={18}>
+                {rows.map((r) => (
+                  <Cell key={r.ym} fill={c.income} opacity={r.ym === selectedMonth ? 1 : 0.35} />
+                ))}
+              </Bar>
+              <Bar dataKey="expense" radius={[6, 6, 2, 2]} maxBarSize={18}>
+                {rows.map((r) => (
+                  <Cell key={r.ym} fill={c.expense} opacity={r.ym === selectedMonth ? 1 : 0.35} />
+                ))}
+              </Bar>
+              <Line type="monotone" dataKey="net" stroke={c.accent} strokeWidth={2.5} dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: c.accent }} />
+            </ComposedChart>
           </ResponsiveContainer>
         )}
       </div>
-
-      {/* Resize hint (desktop only) */}
-      <MoveDiagonal2 className="pointer-events-none absolute bottom-1.5 right-1.5 hidden h-3.5 w-3.5 text-slate-300 dark:text-slate-600 xl:block" />
-    </div>
+    </section>
   );
 };

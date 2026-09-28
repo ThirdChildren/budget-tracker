@@ -1,45 +1,37 @@
-import type { FC } from "react";
+import { useState, type FC } from "react";
 import { useForm } from "react-hook-form";
-import type { Transaction, TransactionType, PaymentMethod } from "../types";
-import { Button } from "./ui/button";
-import {
-  Calendar,
-  FileText,
-  Tag,
-  DollarSign,
-  ArrowUpDown,
-  Check,
-  X,
-  Save,
-  ListPlus,
-  Bitcoin,
-} from "lucide-react";
-import React, { useState } from "react";
+import { AlertTriangle, CalendarDays, Check, ListPlus, PenLine, X } from "lucide-react";
+import type { Transaction, PaymentMethod } from "../types";
+import { cn } from "@/lib/utils";
+import { CATEGORIES, getCategory, tint, TYPES, TYPE_ORDER } from "@/lib/config";
+import { formatEUR, formatSats, formatShortDate, todayISO } from "@/lib/format";
 
 interface Props {
   onAdd: (tx: Omit<Transaction, "id">) => void;
+  onDone: (count: number) => void;
   descriptions: string[];
   paymentMethod: PaymentMethod;
   btcPrice: number | null;
 }
 
-const inputClass =
-  "w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-slate-900 transition-colors placeholder:text-slate-400 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-indigo-500 dark:focus:bg-slate-800";
+type FormValues = Omit<Transaction, "id" | "paymentMethod" | "amountSats" | "btcPrice">;
 
-const labelClass =
-  "flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300";
+const fieldLabel = "mb-2 block text-xs font-bold uppercase tracking-wide text-subtle";
+const errorText = "mt-1.5 text-xs font-medium text-expense";
 
 export const TransactionForm: FC<Props> = ({
   onAdd,
+  onDone,
   descriptions,
   paymentMethod,
   btcPrice,
 }) => {
-  const [pendingTransactions, setPendingTransactions] = useState<
-    Omit<Transaction, "id">[]
-  >([]);
-  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [pending, setPending] = useState<Omit<Transaction, "id">[]>([]);
   const [amountUnit, setAmountUnit] = useState<"eur" | "sats">("eur");
+  const isBtc = paymentMethod === "bitcoin";
+  const btcUnavailable = isBtc && !btcPrice;
+
+  const defaults = { date: todayISO(), type: "expense" as const, description: "", category: "" };
 
   const {
     register,
@@ -47,405 +39,301 @@ export const TransactionForm: FC<Props> = ({
     reset,
     watch,
     formState: { errors },
-  } = useForm<
-    Omit<Transaction, "id" | "paymentMethod" | "amountSats" | "btcPrice">
-  >();
+  } = useForm<FormValues>({ defaultValues: defaults });
 
-  const currentAmount = watch("amount");
+  const [amount, type, category, description, date] = watch([
+    "amount",
+    "type",
+    "category",
+    "description",
+    "date",
+  ]);
 
-  // Calculate conversion
-  const convertedAmount = () => {
-    if (paymentMethod !== "bitcoin" || !currentAmount || !btcPrice) return null;
+  // Anteprima conversione EUR <-> sats
+  const converted =
+    isBtc && amount && btcPrice
+      ? amountUnit === "eur"
+        ? formatSats((Number(amount) / btcPrice) * 1e8)
+        : formatEUR((Number(amount) / 1e8) * btcPrice)
+      : null;
 
-    if (amountUnit === "eur") {
-      // EUR to SATS
-      const sats = (Number(currentAmount) / btcPrice) * 100000000;
-      return sats.toFixed(0);
-    } else {
-      // SATS to EUR
-      const eur = (Number(currentAmount) / 100000000) * btcPrice;
-      return eur.toFixed(2);
-    }
-  };
-
-  // Add transaction to pending list
-  const onAddToPending = (
-    data: Omit<Transaction, "id" | "paymentMethod" | "amountSats" | "btcPrice">,
-  ) => {
-    let transaction: Omit<Transaction, "id">;
-
-    if (paymentMethod === "bitcoin" && btcPrice) {
+  const build = (data: FormValues): Omit<Transaction, "id"> => {
+    if (isBtc && btcPrice) {
       if (amountUnit === "sats") {
-        // Input in sats, calculate EUR
-        const amountInEur = (Number(data.amount) / 100000000) * btcPrice;
-        transaction = {
+        return {
           ...data,
-          amount: amountInEur,
+          amount: (Number(data.amount) / 1e8) * btcPrice,
           amountSats: Number(data.amount),
           btcPrice,
           paymentMethod: "bitcoin",
         };
-      } else {
-        // Input in EUR, calculate sats
-        const amountInSats = (Number(data.amount) / btcPrice) * 100000000;
-        transaction = {
-          ...data,
-          amount: Number(data.amount),
-          amountSats: Math.round(amountInSats),
-          btcPrice,
-          paymentMethod: "bitcoin",
-        };
       }
-    } else {
-      // Credit card transaction
-      transaction = {
+      return {
         ...data,
         amount: Number(data.amount),
-        paymentMethod: "creditCard",
+        amountSats: Math.round((Number(data.amount) / btcPrice) * 1e8),
+        btcPrice,
+        paymentMethod: "bitcoin",
       };
     }
-
-    setPendingTransactions((prev) => [...prev, transaction]);
-    setSelectedDate(data.date);
-
-    // Reset form but keep date
-    reset({
-      date: data.date,
-      description: "",
-      category: "",
-      amount: 0,
-      type: "" as TransactionType,
-    });
+    return { ...data, amount: Number(data.amount), paymentMethod: "creditCard" };
   };
 
-  // Remove from pending
-  const removePending = (index: number) => {
-    setPendingTransactions((prev) => prev.filter((_, i) => i !== index));
+  // Svuota i campi ma mantiene data e tipo per inserimenti in serie
+  const resetKeeping = (data: Pick<FormValues, "date" | "type">) =>
+    reset({ ...defaults, date: data.date, type: data.type, amount: undefined });
+
+  const addToPending = handleSubmit((data) => {
+    setPending((prev) => [...prev, build(data)]);
+    resetKeeping(data);
+  });
+
+  const commit = (list: Omit<Transaction, "id">[]) => {
+    list.forEach((tx) => onAdd(tx));
+    setPending([]);
+    reset({ ...defaults, amount: undefined });
+    onDone(list.length);
   };
 
-  // Save all pending transactions
-  const saveAllTransactions = () => {
-    pendingTransactions.forEach((tx) => onAdd(tx));
-    setPendingTransactions([]);
-    setSelectedDate("");
-    reset();
+  const formEmpty = !description && !amount && !category;
+  const saveCount = pending.length + (formEmpty && pending.length > 0 ? 0 : 1);
+  const save = () => {
+    if (pending.length > 0 && formEmpty) commit(pending);
+    else handleSubmit((data) => commit([...pending, build(data)]))();
   };
 
-  // Clear all
-  const clearAll = () => {
-    setPendingTransactions([]);
-    setSelectedDate("");
-    reset();
-  };
-
-  const transactionTypeLabels = {
-    expense: "Spesa",
-    refund: "Rimborso",
-    salary: "Stipendio",
-    obligation: "Obbligazioni",
-  };
-
-  const transactionTypeColors = {
-    expense: "text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10",
-    refund:
-      "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10",
-    salary: "text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10",
-    obligation:
-      "text-violet-700 dark:text-violet-400 bg-violet-50 dark:bg-violet-500/10",
-  };
+  const typeCfg = TYPES[type] ?? TYPES.expense;
 
   return (
-    <div className="space-y-5">
-      <form onSubmit={handleSubmit(onAddToPending)} className="space-y-5">
-        {/* Date Section */}
-        <div className="space-y-2">
-          <label className={labelClass}>
-            <Calendar className="h-4 w-4 text-indigo-500" />
-            Data delle Transazioni
-          </label>
-          <input
-            type="date"
-            {...register("date", { required: "La data è obbligatoria" })}
-            className={`${inputClass} sm:max-w-xs`}
-          />
-          {errors.date && (
-            <p className="text-sm text-red-600 dark:text-red-400">
-              {errors.date.message}
-            </p>
-          )}
-          {selectedDate && (
-            <p className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400">
-              <Check className="h-3 w-3" />
-              Aggiungi più transazioni per la data{" "}
-              {new Date(selectedDate + "T00:00").toLocaleDateString("it-IT")}
-            </p>
-          )}
-        </div>
-
-        {/* Transaction Details */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <label className={labelClass}>
-              <FileText className="h-4 w-4 text-slate-400" />
-              Descrizione
-            </label>
-            <input
-              list="descs"
-              placeholder="Es. Spesa supermercato"
-              {...register("description", {
-                required: "La descrizione è obbligatoria",
-              })}
-              className={inputClass}
-            />
-            <datalist id="descs">
-              {descriptions.map((d) => (
-                <option key={d} value={d} />
-              ))}
-            </datalist>
-            {errors.description && (
-              <p className="text-sm text-red-600 dark:text-red-400">
-                {errors.description.message}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <label className={labelClass}>
-              <Tag className="h-4 w-4 text-slate-400" />
-              Categoria
-            </label>
-            <select
-              {...register("category", {
-                required: "La categoria è obbligatoria",
-              })}
-              className={inputClass}
-            >
-              <option value="">Seleziona categoria</option>
-              {[
-                "Trasporti",
-                "Casa",
-                "Abbigliamento",
-                "Intrattenimento",
-                "Cibo",
-                "Regali",
-                "Farmacia",
-                "Ricarica",
-                "Piano accumulo bitcoin",
-                "Altro",
-              ].map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-            {errors.category && (
-              <p className="text-sm text-red-600 dark:text-red-400">
-                {errors.category.message}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Amount and Type */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <label className={labelClass}>
-              {paymentMethod === "bitcoin" ? (
-                <Bitcoin className="h-4 w-4 text-orange-500" />
-              ) : (
-                <DollarSign className="h-4 w-4 text-slate-400" />
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        save();
+      }}
+      className="space-y-6"
+    >
+      {/* Tipo */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {TYPE_ORDER.map((t) => {
+          const cfg = TYPES[t];
+          const Icon = cfg.icon;
+          const active = type === t;
+          return (
+            <label
+              key={t}
+              className={cn(
+                "flex cursor-pointer items-center justify-center gap-1.5 rounded-2xl border px-2 py-2.5 text-xs font-bold transition-all",
+                active ? cn(cfg.solid, "border-transparent shadow-md") : "border-line bg-surface text-ink-soft hover:border-ink/20",
               )}
-              Importo
-            </label>
-
-            {/* Bitcoin: Toggle EUR/SATS */}
-            {paymentMethod === "bitcoin" && (
-              <div className="flex rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setAmountUnit("eur")}
-                  className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                    amountUnit === "eur"
-                      ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white"
-                      : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                  }`}
-                >
-                  € Euro
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAmountUnit("sats")}
-                  className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                    amountUnit === "sats"
-                      ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white"
-                      : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                  }`}
-                >
-                  ₿ Satoshi
-                </button>
-              </div>
-            )}
-
-            <input
-              type="number"
-              inputMode="decimal"
-              step={
-                paymentMethod === "creditCard"
-                  ? "0.01"
-                  : amountUnit === "sats"
-                    ? "1"
-                    : "0.01"
-              }
-              placeholder={
-                paymentMethod === "bitcoin"
-                  ? amountUnit === "sats"
-                    ? "0 sats"
-                    : "0.00 €"
-                  : "0.00 €"
-              }
-              {...register("amount", {
-                required: "L'importo è obbligatorio",
-                min: {
-                  value: 0.01,
-                  message: "L'importo deve essere maggiore di 0",
-                },
-              })}
-              className={inputClass}
-            />
-
-            {/* Conversion preview for Bitcoin */}
-            {paymentMethod === "bitcoin" && currentAmount && btcPrice && (
-              <p className="text-xs text-orange-600 dark:text-orange-400">
-                ≈{" "}
-                {amountUnit === "eur"
-                  ? `${convertedAmount()} sats`
-                  : `€${convertedAmount()}`}
-              </p>
-            )}
-
-            {errors.amount && (
-              <p className="text-sm text-red-600 dark:text-red-400">
-                {errors.amount.message}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <label className={labelClass}>
-              <ArrowUpDown className="h-4 w-4 text-slate-400" />
-              Tipo
-            </label>
-            <select
-              {...register("type", { required: "Il tipo è obbligatorio" })}
-              className={inputClass}
             >
-              <option value="">Seleziona tipo</option>
-              {(
-                [
-                  "expense",
-                  "refund",
-                  "salary",
-                  "obligation",
-                ] as TransactionType[]
-              ).map((t) => (
-                <option key={t} value={t}>
-                  {transactionTypeLabels[t]}
-                </option>
-              ))}
-            </select>
-            {errors.type && (
-              <p className="text-sm text-red-600 dark:text-red-400">
-                {errors.type.message}
-              </p>
-            )}
-          </div>
-        </div>
+              <input type="radio" value={t} className="sr-only" {...register("type", { required: true })} />
+              <Icon className={cn("h-4 w-4", !active && cfg.text)} />
+              {cfg.label}
+            </label>
+          );
+        })}
+      </div>
 
-        {/* Add Button */}
-        <div className="flex justify-stretch sm:justify-end">
-          <Button
-            type="submit"
-            className="w-full rounded-xl bg-indigo-600 px-6 py-3 text-white shadow-sm transition-colors hover:bg-indigo-700 sm:w-auto"
-          >
-            <ListPlus className="h-5 w-5" />
-            {pendingTransactions.length > 0
-              ? "Aggiungi Altra"
-              : "Aggiungi Transazione"}
-          </Button>
-        </div>
-      </form>
-
-      {/* Pending Transactions List */}
-      {pendingTransactions.length > 0 && (
-        <div className="animate-fade-in rounded-2xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-500/30 dark:bg-amber-500/5 sm:p-5">
-          <div className="mb-4 flex items-center justify-between gap-2">
-            <h3 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-slate-100 sm:text-lg">
-              <ListPlus className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-              In Attesa ({pendingTransactions.length})
-            </h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearAll}
-              className="text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400"
-            >
-              <X className="mr-1 h-4 w-4" />
-              Cancella Tutto
-            </Button>
-          </div>
-
-          <div className="mb-4 space-y-2.5">
-            {pendingTransactions.map((tx, idx) => (
-              <div
-                key={idx}
-                className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900 sm:p-4"
+      {/* Importo */}
+      <div className="rounded-3xl bg-surface-2 p-5 text-center">
+        {isBtc && (
+          <div className="mx-auto mb-3 flex w-fit rounded-full bg-surface p-1 text-xs font-bold shadow-sm">
+            {(["eur", "sats"] as const).map((u) => (
+              <button
+                key={u}
+                type="button"
+                onClick={() => setAmountUnit(u)}
+                className={cn(
+                  "rounded-full px-4 py-1.5 transition-colors",
+                  amountUnit === u ? "bg-btc text-white" : "text-subtle hover:text-ink",
+                )}
               >
-                <div className="min-w-0 flex-1">
-                  <div className="mb-1.5 flex flex-wrap items-center gap-2">
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                        transactionTypeColors[tx.type]
-                      }`}
-                    >
-                      {transactionTypeLabels[tx.type]}
-                    </span>
-                    <span className="text-xs text-slate-500 dark:text-slate-400">
-                      {new Date(tx.date + "T00:00").toLocaleDateString("it-IT")}
-                    </span>
-                  </div>
-                  <div className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
-                    {tx.description}
-                  </div>
-                  <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                    {tx.category} •
-                    {tx.paymentMethod === "bitcoin" && tx.amountSats
-                      ? ` ${tx.amountSats.toLocaleString()} sats (€${Number(
-                          tx.amount,
-                        ).toFixed(2)})`
-                      : ` €${Number(tx.amount).toFixed(2)}`}
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removePending(idx)}
-                  className="shrink-0 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
+                {u === "eur" ? "€ Euro" : "₿ Satoshi"}
+              </button>
             ))}
           </div>
+        )}
+        <div className="flex items-baseline justify-center gap-2">
+          <span className={cn("text-3xl font-bold", typeCfg.text)}>
+            {typeCfg.sign}
+            {isBtc && amountUnit === "sats" ? "" : "€"}
+          </span>
+          <input
+            type="number"
+            inputMode="decimal"
+            step={isBtc && amountUnit === "sats" ? "1" : "0.01"}
+            placeholder="0,00"
+            autoFocus
+            {...register("amount", {
+              required: "Inserisci un importo",
+              min: { value: 0.01, message: "L'importo deve essere maggiore di 0" },
+            })}
+            className="w-full min-w-[4ch] max-w-[14rem] bg-transparent text-center text-5xl [field-sizing:content] font-extrabold tracking-tight tabular placeholder:text-ink/20 focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          />
+          {isBtc && amountUnit === "sats" && <span className="text-lg font-bold text-subtle">sats</span>}
+        </div>
+        {converted && <p className="mt-1 text-sm font-semibold text-btc">≈ {converted}</p>}
+        {errors.amount && <p className={errorText}>{errors.amount.message}</p>}
+      </div>
 
-          <Button
-            onClick={saveAllTransactions}
-            className="w-full rounded-xl bg-emerald-600 py-3 font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700"
-          >
-            <Save className="h-5 w-5" />
-            Salva Tutte le Transazioni ({pendingTransactions.length})
-          </Button>
+      {/* Categoria */}
+      <div>
+        <span className={fieldLabel}>Categoria</span>
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+          {CATEGORIES.map(({ name, icon: Icon, color }) => {
+            const active = category === name;
+            return (
+              <label
+                key={name}
+                className={cn(
+                  "group flex cursor-pointer flex-col items-center gap-1.5 rounded-2xl border p-2.5 text-center transition-all",
+                  active ? "border-transparent shadow-md" : "border-line hover:border-ink/20",
+                )}
+                style={active ? { backgroundColor: tint(color, "1a"), boxShadow: `inset 0 0 0 2px ${color}` } : undefined}
+              >
+                <input
+                  type="radio"
+                  value={name}
+                  className="sr-only"
+                  {...register("category", { required: "Scegli una categoria" })}
+                />
+                <span
+                  className="flex h-9 w-9 items-center justify-center rounded-xl transition-transform group-hover:scale-110"
+                  style={{ backgroundColor: active ? color : tint(color), color: active ? "#fff" : color }}
+                >
+                  <Icon className="h-[18px] w-[18px]" />
+                </span>
+                <span className="line-clamp-1 w-full text-[11px] font-semibold leading-tight">
+                  {name === "Piano accumulo bitcoin" ? "PAC Bitcoin" : name}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+        {errors.category && <p className={errorText}>{errors.category.message}</p>}
+      </div>
+
+      {/* Descrizione + data */}
+      <div className="grid gap-3 sm:grid-cols-[1fr_11rem]">
+        <div>
+          <label className={fieldLabel} htmlFor="tx-description">Descrizione</label>
+          <div className="relative">
+            <PenLine className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" />
+            <input
+              id="tx-description"
+              list="descs"
+              placeholder="Es. Spesa supermercato"
+              autoComplete="off"
+              {...register("description", { required: "Aggiungi una descrizione" })}
+              className="w-full rounded-2xl border border-line bg-surface-2 py-3 pl-10 pr-3 text-sm placeholder:text-subtle focus:border-brand-ink/40 focus:bg-surface focus:outline-none focus:ring-4 focus:ring-brand/30"
+            />
+          </div>
+          <datalist id="descs">
+            {descriptions.map((d) => (
+              <option key={d} value={d} />
+            ))}
+          </datalist>
+          {errors.description && <p className={errorText}>{errors.description.message}</p>}
+        </div>
+        <div>
+          <label className={fieldLabel} htmlFor="tx-date">Data</label>
+          <div className="relative">
+            <CalendarDays className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" />
+            <input
+              id="tx-date"
+              type="date"
+              {...register("date", { required: "Scegli una data" })}
+              className="w-full rounded-2xl border border-line bg-surface-2 py-3 pl-10 pr-3 text-sm focus:border-brand-ink/40 focus:bg-surface focus:outline-none focus:ring-4 focus:ring-brand/30"
+            />
+          </div>
+          {errors.date && <p className={errorText}>{errors.date.message}</p>}
+        </div>
+      </div>
+
+      {/* In attesa di salvataggio */}
+      {pending.length > 0 && (
+        <div className="animate-rise rounded-3xl border border-dashed border-line p-3">
+          <div className="mb-2 flex items-center justify-between px-1">
+            <p className="text-xs font-bold uppercase tracking-wide text-subtle">
+              In coda · {pending.length}
+            </p>
+            <button
+              type="button"
+              onClick={() => setPending([])}
+              className="text-xs font-semibold text-subtle hover:text-expense"
+            >
+              Svuota
+            </button>
+          </div>
+          <ul className="space-y-1.5">
+            {pending.map((tx, idx) => {
+              const cat = getCategory(tx.category);
+              const Icon = cat.icon;
+              return (
+                <li key={idx} className="flex items-center gap-3 rounded-2xl bg-surface-2 px-3 py-2">
+                  <span
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
+                    style={{ backgroundColor: tint(cat.color), color: cat.color }}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{tx.description}</p>
+                    <p className="text-[11px] text-subtle">
+                      {TYPES[tx.type].label} · {formatShortDate(tx.date)}
+                    </p>
+                  </div>
+                  <span className={cn("text-sm font-bold tabular", TYPES[tx.type].text)}>
+                    {TYPES[tx.type].sign}
+                    {tx.amountSats ? formatSats(tx.amountSats) : formatEUR(tx.amount)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPending((p) => p.filter((_, i) => i !== idx))}
+                    className="rounded-full p-1 text-subtle hover:bg-expense/10 hover:text-expense"
+                    aria-label="Rimuovi"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
-    </div>
+
+      {btcUnavailable && (
+        <p className="flex items-center gap-2 rounded-2xl bg-btc/10 px-4 py-3 text-sm font-medium text-btc">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          Prezzo Bitcoin non disponibile: impossibile convertire l'importo.
+        </p>
+      )}
+
+      {/* Azioni */}
+      <div className="flex flex-col-reverse gap-2 sm:flex-row">
+        <button
+          type="button"
+          onClick={addToPending}
+          disabled={btcUnavailable}
+          className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-line px-4 py-3.5 text-sm font-bold text-ink transition-colors hover:bg-surface-2 disabled:opacity-40"
+        >
+          <ListPlus className="h-4 w-4" />
+          Aggiungi e continua
+        </button>
+        <button
+          type="submit"
+          disabled={btcUnavailable}
+          className="flex flex-[1.4] items-center justify-center gap-2 rounded-2xl bg-hero px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-hero/20 transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-40 dark:bg-brand dark:text-hero"
+        >
+          <Check className="h-4 w-4" strokeWidth={3} />
+          {saveCount > 1 ? `Salva ${saveCount} transazioni` : "Salva transazione"}
+        </button>
+      </div>
+      {date && pending.length > 0 && (
+        <p className="-mt-3 text-center text-[11px] text-subtle">
+          Data e tipo restano impostati per inserire più movimenti di fila
+        </p>
+      )}
+    </form>
   );
 };

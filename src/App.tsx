@@ -1,56 +1,45 @@
 // src/App.tsx
 
-import React, { useState, useMemo, useEffect, Suspense, lazy } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense, lazy } from "react";
 import { v4 as uuid } from "uuid";
 import * as Papa from "papaparse";
 import { saveAs } from "file-saver";
 import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
 import { Capacitor } from "@capacitor/core";
-import {
-  Calendar,
-  FileDown,
-  Upload,
-  TrendingUp,
-  TrendingDown,
-  Wallet,
-  BarChart3,
-  Plus,
-  Landmark,
-  CreditCard,
-  Bitcoin,
-} from "lucide-react";
+import { Check } from "lucide-react";
 
-import type { Transaction, PaymentMethod } from "./types";
+import type { Transaction, PaymentMethod, TransactionType } from "./types";
 import { TransactionForm } from "./components/TransactionForm";
+import { TransactionSheet } from "./components/TransactionSheet";
 import { CategoryList } from "./components/CategoryList";
-import { Sidebar } from "./components/Sidebar";
+import { TransactionsView } from "./components/TransactionsView";
+import { SideNav, BottomNav, type View } from "./components/layout/Navigation";
+import { TopBar } from "./components/layout/TopBar";
+import { BalanceHero, type MonthPoint } from "./components/dashboard/BalanceHero";
+import { StatTiles } from "./components/dashboard/StatTiles";
+import { BitcoinCard } from "./components/dashboard/BitcoinCard";
+import { RecentTransactions } from "./components/dashboard/RecentTransactions";
+import { useTheme } from "./hooks/useTheme";
+import { currentMonth, shiftMonth } from "./lib/format";
+import { computeTotals } from "./lib/stats";
+import { MoneyProvider, toSats } from "./lib/money";
 
-// Lazy load dei grafici per code-splitting
-const SpendingByCategoryChart = lazy(() =>
-  import("./components/charts/SpendingByCategoryChart").then((m) => ({
-    default: m.SpendingByCategoryChart,
+// Lazy load della vista grafici per code-splitting
+const AnalyticsView = lazy(() =>
+  import("./components/AnalyticsView").then((m) => ({
+    default: m.AnalyticsView,
   })),
 );
-const MonthlyTrendsChart = lazy(() =>
-  import("./components/charts/MonthlyTrendsChart").then((m) => ({
-    default: m.MonthlyTrendsChart,
-  })),
-);
-
-const btnSecondary =
-  "inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100";
 
 export default function App() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   // default to current month/year (e.g. "2025-05")
-  const now = new Date();
-  const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
-    2,
-    "0",
-  )}`;
-  const [selectedMonth, setSelectedMonth] = useState<string>(thisMonth);
-  const [showCharts, setShowCharts] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonth);
+  const [view, setView] = useState<View>("dashboard");
+  const [typeFilter, setTypeFilter] = useState<TransactionType | "all">("all");
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   // Payment method and Bitcoin states
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
@@ -58,7 +47,17 @@ export default function App() {
   const [btcPrice, setBtcPrice] = useState<number | null>(null);
   const [isBtcLoading, setIsBtcLoading] = useState(false);
   const [showInSats, setShowInSats] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Toast di conferma
+  const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
+  const toastTimer = useRef<number | undefined>(undefined);
+  const showToast = useCallback((message: string) => {
+    window.clearTimeout(toastTimer.current);
+    setToast({ id: Date.now(), message });
+    toastTimer.current = window.setTimeout(() => setToast(null), 2600);
+  }, []);
+
+  const closeSheet = useCallback(() => setIsSheetOpen(false), []);
 
   // Fetch Bitcoin price from CoinGecko API
   useEffect(() => {
@@ -101,6 +100,7 @@ export default function App() {
       try {
         const parsed = JSON.parse(ev.target?.result as string) as Transaction[];
         setTransactions(parsed);
+        showToast(`${parsed.length} transazioni importate`);
       } catch {
         alert("File non valido");
       }
@@ -135,7 +135,7 @@ export default function App() {
           directory: Directory.Documents,
           encoding: Encoding.UTF8,
         });
-        alert(`File salvato:\n${fileName}\n\nTrovalo in Documenti`);
+        showToast(`Salvato in Documenti: ${fileName}`);
       } catch (error) {
         console.error("Errore salvataggio file:", error);
         alert(`Errore: ${error}`);
@@ -175,7 +175,7 @@ export default function App() {
           directory: Directory.Documents,
           encoding: Encoding.UTF8,
         });
-        alert(`File salvato:\n${fileName}\n\nTrovalo in Documenti`);
+        showToast(`Salvato in Documenti: ${fileName}`);
       } catch (error) {
         console.error("Errore salvataggio file:", error);
         alert(`Errore: ${error}`);
@@ -198,32 +198,43 @@ export default function App() {
     [transactions],
   );
 
-  // filter by selected month (YYYY-MM) and payment method
-  const filtered = useMemo(
+  // transazioni del metodo di pagamento selezionato (tutte le date)
+  const byMethod = useMemo(
     () =>
-      transactions
-        .filter((t) => t.date.startsWith(selectedMonth))
-        .filter(
-          (t) => !t.paymentMethod || t.paymentMethod === selectedPaymentMethod,
-        ),
-    [transactions, selectedMonth, selectedPaymentMethod],
+      transactions.filter(
+        (t) => !t.paymentMethod || t.paymentMethod === selectedPaymentMethod,
+      ),
+    [transactions, selectedPaymentMethod],
   );
 
-  // calculate totals
-  const totalExpense = filtered
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + t.amount, 0);
-  const totalRefund = filtered
-    .filter((t) => t.type === "refund")
-    .reduce((sum, t) => sum + t.amount, 0);
-  const totalSalary = filtered
-    .filter((t) => t.type === "salary")
-    .reduce((sum, t) => sum + t.amount, 0);
-  const totalObligations = filtered
-    .filter((t) => t.type === "obligation")
-    .reduce((sum, t) => sum + t.amount, 0);
-  const netBalance =
-    totalSalary + totalRefund + totalObligations - totalExpense;
+  // filter by selected month (YYYY-MM) and payment method
+  const filtered = useMemo(
+    () => byMethod.filter((t) => t.date.startsWith(selectedMonth)),
+    [byMethod, selectedMonth],
+  );
+  const prevMonth = shiftMonth(selectedMonth, -1);
+  const inSats = selectedPaymentMethod === "bitcoin" && showInSats;
+  // valore nell'unità selezionata (€ o sats) per totali e grafici
+  const valueOf = useCallback(
+    (t: Transaction) => (inSats ? toSats(t) : t.amount),
+    [inSats],
+  );
+  const totals = useMemo(() => computeTotals(filtered, valueOf), [filtered, valueOf]);
+  const prevTotals = useMemo(
+    () => computeTotals(byMethod.filter((t) => t.date.startsWith(prevMonth)), valueOf),
+    [byMethod, prevMonth, valueOf],
+  );
+
+  // saldo degli ultimi 6 mesi per il mini grafico della hero card
+  const history = useMemo<MonthPoint[]>(
+    () =>
+      Array.from({ length: 6 }, (_, i) => {
+        const month = shiftMonth(selectedMonth, i - 5);
+        const t = computeTotals(byMethod.filter((tx) => tx.date.startsWith(month)), valueOf);
+        return { month, net: t.net, income: t.income, expense: t.expense };
+      }),
+    [byMethod, selectedMonth, valueOf],
+  );
 
   // Calculate Bitcoin total balance (all-time, not just current month)
   const btcInitialBalanceSats = parseInt(
@@ -244,273 +255,177 @@ export default function App() {
     return btcInitialBalanceSats + btcDelta;
   }, [transactions, btcInitialBalanceSats]);
 
-  const summaryCards = [
-    {
-      label: "Spese Totali",
-      value: totalExpense,
-      icon: TrendingDown,
-      iconClass: "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400",
-      valueClass: "text-red-600 dark:text-red-400",
-    },
-    {
-      label: "Rimborsi",
-      value: totalRefund,
-      icon: TrendingUp,
-      iconClass:
-        "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400",
-      valueClass: "text-emerald-600 dark:text-emerald-400",
-    },
-    {
-      label: "Stipendio",
-      value: totalSalary,
-      icon: Wallet,
-      iconClass:
-        "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400",
-      valueClass: "text-blue-600 dark:text-blue-400",
-    },
-    {
-      label: "Obbligazioni",
-      value: totalObligations,
-      icon: Landmark,
-      iconClass:
-        "bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400",
-      valueClass: "text-violet-600 dark:text-violet-400",
-    },
-  ];
+  const goToTransactions = (type: TransactionType | "all" = "all") => {
+    setTypeFilter(type);
+    setView("transactions");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const changeView = (v: View) => {
+    setView(v);
+    window.scrollTo({ top: 0 });
+  };
+
+  const dataActions = {
+    onExportJSON: exportJSON,
+    onExportCSV: exportCSV,
+    onImport: handleUpload,
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      {/* Sidebar */}
-      <Sidebar
-        selectedPaymentMethod={selectedPaymentMethod}
-        onPaymentMethodChange={setSelectedPaymentMethod}
-        btcPrice={btcPrice}
-        isLoading={isBtcLoading}
-        showInSats={showInSats}
-        onToggleSatsView={() => setShowInSats(!showInSats)}
-        isOpen={isSidebarOpen}
-        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-        btcBalanceSats={btcTotalBalanceSats}
+    <MoneyProvider value={inSats}>
+    <div className="min-h-screen bg-canvas">
+      <SideNav
+        view={view}
+        onViewChange={changeView}
+        onAdd={() => setIsSheetOpen(true)}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        transactionCount={filtered.length}
+        {...dataActions}
       />
 
-      {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-3 py-3 lg:flex-row lg:items-center lg:justify-between lg:py-4">
-            {/* Title row */}
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
-                  <Wallet className="h-5 w-5" />
-                </div>
-                <div>
-                  <h1 className="text-lg font-bold leading-tight text-slate-900 dark:text-white sm:text-xl">
-                    Budget Tracker
-                  </h1>
-                  <p className="hidden text-xs text-slate-500 dark:text-slate-400 sm:block">
-                    Gestisci le tue finanze personali
-                  </p>
-                </div>
-              </div>
+      <div className="lg:pl-64">
+        <TopBar
+          view={view}
+          selectedMonth={selectedMonth}
+          onMonthChange={setSelectedMonth}
+          paymentMethod={selectedPaymentMethod}
+          onPaymentMethodChange={setSelectedPaymentMethod}
+        />
 
-              {/* Payment method pill (always visible, opens panel) */}
-              <button
-                onClick={() => setIsSidebarOpen(true)}
-                className={`${btnSecondary} shrink-0`}
-                title="Cambia metodo di pagamento"
+        <main
+          key={`${view}-${selectedPaymentMethod}`}
+          className="mx-auto max-w-6xl px-4 pb-32 pt-4 sm:px-6 lg:px-8 lg:pb-12 lg:pt-6"
+        >
+          {view === "dashboard" && (
+            <div className="space-y-4 sm:space-y-6">
+              <div
+                className={
+                  selectedPaymentMethod === "bitcoin"
+                    ? "grid gap-4 sm:gap-6 xl:grid-cols-[1fr_22rem]"
+                    : undefined
+                }
               >
-                {selectedPaymentMethod === "bitcoin" ? (
-                  <>
-                    <Bitcoin size={16} className="text-orange-500" />
-                    <span>Bitcoin</span>
-                  </>
-                ) : (
-                  <>
-                    <CreditCard size={16} className="text-indigo-500" />
-                    <span>Carta</span>
-                  </>
+                <BalanceHero
+                  month={selectedMonth}
+                  totals={totals}
+                  prevTotals={prevTotals}
+                  history={history}
+                  onSelectMonth={setSelectedMonth}
+                />
+                {selectedPaymentMethod === "bitcoin" && (
+                  <BitcoinCard
+                    btcPrice={btcPrice}
+                    isLoading={isBtcLoading}
+                    balanceSats={btcTotalBalanceSats}
+                    showInSats={showInSats}
+                    onToggleSats={() => setShowInSats((v) => !v)}
+                  />
                 )}
-              </button>
-            </div>
-
-            {/* Controls row */}
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Month picker */}
-              <div className="flex flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 sm:flex-none">
-                <Calendar
-                  size={16}
-                  className="shrink-0 text-slate-400 dark:text-slate-500"
-                />
-                <input
-                  type="month"
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="w-full cursor-pointer bg-transparent text-sm font-medium text-slate-900 focus:outline-none dark:text-slate-100"
-                />
               </div>
 
-              <button
-                onClick={exportJSON}
-                className={btnSecondary}
-                title="Esporta JSON"
-              >
-                <FileDown size={16} />
-                <span>JSON</span>
-              </button>
-              <button
-                onClick={exportCSV}
-                className={btnSecondary}
-                title="Esporta CSV"
-              >
-                <FileDown size={16} />
-                <span>CSV</span>
-              </button>
-              <label className={`${btnSecondary} cursor-pointer`} title="Importa file">
-                <Upload size={16} />
-                <span>Import</span>
-                <input
-                  type="file"
-                  accept="application/json"
-                  onChange={handleUpload}
-                  className="hidden"
-                />
-              </label>
+              <StatTiles
+                totals={totals}
+                prevTotals={prevTotals}
+                onSelect={goToTransactions}
+              />
 
-              <button
-                onClick={() => setShowCharts((v) => !v)}
-                className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium shadow-sm transition-colors ${
-                  showCharts
-                    ? "bg-indigo-600 text-white hover:bg-indigo-700"
-                    : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-                }`}
-                title={showCharts ? "Nascondi grafici" : "Visualizza grafici"}
-              >
-                <BarChart3 size={16} />
-                <span>{showCharts ? "Nascondi" : "Grafici"}</span>
-              </button>
+              <div className="grid items-start gap-4 sm:gap-6 lg:grid-cols-5">
+                <div className="lg:col-span-3">
+                  <CategoryList transactions={filtered} inSats={inSats} />
+                </div>
+                <div className="lg:sticky lg:top-32 lg:col-span-2">
+                  <RecentTransactions
+                    transactions={filtered}
+                    showInSats={inSats}
+                    onSeeAll={() => goToTransactions()}
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </header>
+          )}
 
-      <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-        {/* Charts Section */}
-        {showCharts && (
-          <section className="animate-fade-in">
+          {view === "transactions" && (
+            <TransactionsView
+              transactions={filtered}
+              inSats={inSats}
+              typeFilter={typeFilter}
+              onTypeFilterChange={setTypeFilter}
+            />
+          )}
+
+          {view === "analytics" && (
             <Suspense
               fallback={
-                <div className="flex items-center justify-center py-12">
-                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent"></div>
+                <div className="flex items-center justify-center py-24">
+                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-ink border-t-transparent" />
                 </div>
               }
             >
-              {/* flex-wrap: i grafici sono ridimensionabili col mouse su desktop */}
-              <div className="flex flex-col gap-4 xl:flex-row xl:flex-wrap xl:items-start">
-                <SpendingByCategoryChart transactions={filtered} />
-                <MonthlyTrendsChart
-                  transactions={transactions}
-                  paymentMethod={selectedPaymentMethod}
-                />
-              </div>
+              <AnalyticsView
+                monthTransactions={filtered}
+                allTransactions={byMethod}
+                selectedMonth={selectedMonth}
+                onSelectMonth={setSelectedMonth}
+                dark={theme === "dark"}
+              />
             </Suspense>
-          </section>
-        )}
+          )}
+        </main>
+      </div>
 
-        {/* Summary Cards */}
-        <div className="grid animate-slide-up grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5">
-          {summaryCards.map(({ label, value, icon: Icon, iconClass, valueClass }) => (
-            <div
-              key={label}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-900 sm:p-5"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400 sm:text-sm">
-                    {label}
-                  </p>
-                  <p
-                    className={`mt-1 truncate text-lg font-bold sm:text-2xl ${valueClass}`}
-                  >
-                    €{value.toFixed(2)}
-                  </p>
-                </div>
-                <div
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 ${iconClass}`}
-                >
-                  <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
-                </div>
-              </div>
-            </div>
-          ))}
+      <BottomNav
+        view={view}
+        onViewChange={changeView}
+        onAdd={() => setIsSheetOpen(true)}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        transactionCount={filtered.length}
+        {...dataActions}
+      />
 
-          {/* Net balance */}
-          <div className="col-span-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-900 sm:p-5 xl:col-span-1">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400 sm:text-sm">
-                  Saldo Netto
-                </p>
-                <p
-                  className={`mt-1 truncate text-lg font-bold sm:text-2xl ${
-                    netBalance >= 0
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-red-600 dark:text-red-400"
-                  }`}
-                >
-                  €{netBalance.toFixed(2)}
-                </p>
-              </div>
-              <div
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 ${
-                  netBalance >= 0
-                    ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
-                    : "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400"
-                }`}
-              >
-                {netBalance >= 0 ? (
-                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
-                ) : (
-                  <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5" />
-                )}
-              </div>
-            </div>
+      <TransactionSheet
+        open={isSheetOpen}
+        onClose={closeSheet}
+        title="Nuova transazione"
+        subtitle={
+          selectedPaymentMethod === "bitcoin"
+            ? "Pagamento in Bitcoin"
+            : "Pagamento con carta"
+        }
+      >
+        <TransactionForm
+          onAdd={handleAdd}
+          onDone={(count) => {
+            closeSheet();
+            showToast(
+              count === 1
+                ? "Transazione salvata"
+                : `${count} transazioni salvate`,
+            );
+          }}
+          descriptions={descriptions}
+          paymentMethod={selectedPaymentMethod}
+          btcPrice={btcPrice}
+        />
+      </TransactionSheet>
+
+      {/* Toast di conferma */}
+      {toast && (
+        <div
+          key={toast.id}
+          className="pointer-events-none fixed inset-x-0 z-[60] flex justify-center px-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] lg:bottom-8"
+        >
+          <div className="flex items-center gap-2.5 rounded-full bg-hero py-2.5 pl-2.5 pr-5 text-sm font-semibold text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 dark:bg-surface-2 dark:text-ink">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand text-hero">
+              <Check className="h-3.5 w-3.5" strokeWidth={3} />
+            </span>
+            {toast.message}
           </div>
         </div>
-
-        {/* Form (destra, sticky su desktop) + Categorie (sinistra) */}
-        <div className="grid items-start gap-6 lg:grid-cols-5">
-          {/* Transaction Form */}
-          <div className="animate-fade-in rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6 lg:sticky lg:top-24 lg:order-2 lg:col-span-2 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
-            <h2 className="mb-5 flex items-center gap-2.5 text-lg font-bold text-slate-900 dark:text-white sm:text-xl">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
-                <Plus className="h-4 w-4" />
-              </span>
-              Aggiungi Transazioni
-            </h2>
-            <TransactionForm
-              onAdd={handleAdd}
-              descriptions={descriptions}
-              paymentMethod={selectedPaymentMethod}
-              btcPrice={btcPrice}
-            />
-          </div>
-
-          {/* Category Cards */}
-          <div className="animate-fade-in lg:order-1 lg:col-span-3">
-            <h2 className="mb-4 flex items-center gap-2.5 text-lg font-bold text-slate-900 dark:text-white sm:text-xl">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400">
-                <BarChart3 className="h-4 w-4" />
-              </span>
-              Riepilogo per Categoria
-            </h2>
-            <CategoryList
-              transactions={filtered}
-              showInSats={showInSats}
-              paymentMethod={selectedPaymentMethod}
-            />
-          </div>
-        </div>
-      </main>
+      )}
     </div>
+    </MoneyProvider>
   );
 }

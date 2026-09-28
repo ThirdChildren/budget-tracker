@@ -1,121 +1,119 @@
-import React, { useMemo } from "react";
-import type { FC } from "react";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
-import { MoveDiagonal2 } from "lucide-react";
+import { useMemo, useState, type FC } from "react";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { cn } from "@/lib/utils";
+import { getCategory } from "@/lib/config";
+import { useMoney } from "@/lib/money";
 import type { Transaction } from "../../types";
 
 interface Props {
   transactions: Transaction[];
 }
 
-const COLORS = [
-  "#6366f1", // indigo
-  "#8b5cf6", // violet
-  "#ec4899", // pink
-  "#ef4444", // red
-  "#10b981", // emerald
-  "#eab308", // yellow
-  "#06b6d4", // cyan
-  "#f97316", // orange
-  "#3b82f6", // blue
-  "#64748b", // slate
-];
-
-const PieTooltip = ({ active, payload }: any) => {
-  if (!active || !payload?.length) return null;
-  const { name, value, payload: item } = payload[0];
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
-      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-        {name}
-      </p>
-      <p className="text-sm text-slate-600 dark:text-slate-300">
-        €{Number(value).toFixed(2)}
-        {item.percent != null && (
-          <span className="ml-1.5 text-xs text-slate-400 dark:text-slate-500">
-            ({item.percent.toFixed(1)}%)
-          </span>
-        )}
-      </p>
-    </div>
-  );
-};
-
 export const SpendingByCategoryChart: FC<Props> = ({ transactions }) => {
+  const [hovered, setHovered] = useState<number | null>(null);
+  const { value: valueOf, format } = useMoney();
+
   // Solo le spese, aggregate per categoria
-  const data = useMemo(() => {
+  const { data, total } = useMemo(() => {
     const map = new Map<string, number>();
     for (const tx of transactions) {
       if (tx.type !== "expense") continue;
-      map.set(tx.category, (map.get(tx.category) || 0) + tx.amount);
+      map.set(tx.category, (map.get(tx.category) || 0) + valueOf(tx));
     }
     const total = Array.from(map.values()).reduce((s, v) => s + v, 0);
-    return Array.from(map, ([name, value]) => ({
+    const data = Array.from(map, ([name, value]) => ({
       name,
       value,
       percent: total > 0 ? (value / total) * 100 : 0,
+      color: getCategory(name).color,
     })).sort((a, b) => b.value - a.value);
-  }, [transactions]);
+    return { data, total };
+  }, [transactions, valueOf]);
+
+  const focus = hovered !== null ? data[hovered] : null;
 
   return (
-    <div
-      className="relative flex h-[340px] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-5 xl:h-[400px] xl:w-[440px] xl:min-h-[320px] xl:min-w-[360px] xl:max-w-full xl:resize"
-      title="Trascina l'angolo in basso a destra per ridimensionare"
-    >
-      <div className="mb-2 flex items-center gap-2.5">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-base dark:bg-indigo-500/10">
-          📊
-        </span>
-        <h3 className="text-base font-bold text-slate-900 dark:text-white sm:text-lg">
-          Spese per Categoria
-        </h3>
-      </div>
+    <section className="card animate-rise p-5 sm:p-6">
+      <h3 className="text-base font-bold">Spese per categoria</h3>
+      <p className="text-xs text-subtle">Passa sopra una fetta o una voce per i dettagli</p>
 
-      <div className="min-h-0 flex-1">
-        {data.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-sm text-slate-500 dark:text-slate-400">
-            Nessuna spesa nel periodo selezionato
+      {data.length === 0 ? (
+        <div className="flex h-64 items-center justify-center text-sm text-subtle">
+          Nessuna spesa nel periodo selezionato
+        </div>
+      ) : (
+        <div className="mt-4 grid items-center gap-6 sm:grid-cols-[minmax(0,15rem)_1fr]">
+          <div className="relative mx-auto aspect-square w-full max-w-60">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={data}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius="68%"
+                  outerRadius="100%"
+                  paddingAngle={2}
+                  cornerRadius={6}
+                  strokeWidth={0}
+                  onMouseEnter={(_, i) => setHovered(i)}
+                  onMouseLeave={() => setHovered(null)}
+                >
+                  {data.map((entry, i) => (
+                    <Cell
+                      key={entry.name}
+                      fill={entry.color}
+                      opacity={hovered === null || hovered === i ? 1 : 0.25}
+                      style={{ transition: "opacity .2s", outline: "none" }}
+                    />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+            {/* Etichetta centrale */}
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+              <span className="max-w-[70%] truncate text-xs font-semibold text-subtle">
+                {focus ? focus.name : "Totale"}
+              </span>
+              <span className="text-xl font-extrabold tracking-tight tabular">
+                {format(focus ? focus.value : total)}
+              </span>
+              {focus && (
+                <span className="text-xs font-bold" style={{ color: focus.color }}>
+                  {focus.percent.toFixed(1)}%
+                </span>
+              )}
+            </div>
           </div>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data}
-                dataKey="value"
-                nameKey="name"
-                innerRadius="50%"
-                outerRadius="78%"
-                paddingAngle={2}
-                strokeWidth={0}
-              >
-                {data.map((entry, i) => (
-                  <Cell key={entry.name} fill={COLORS[i % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip content={<PieTooltip />} />
-              <Legend
-                iconType="circle"
-                iconSize={8}
-                formatter={(value: string) => (
-                  <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                    {value}
-                  </span>
-                )}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        )}
-      </div>
 
-      {/* Resize hint (desktop only) */}
-      <MoveDiagonal2 className="pointer-events-none absolute bottom-1.5 right-1.5 hidden h-3.5 w-3.5 text-slate-300 dark:text-slate-600 xl:block" />
-    </div>
+          <ul className="space-y-1">
+            {data.map((d, i) => (
+              <li
+                key={d.name}
+                onMouseEnter={() => setHovered(i)}
+                onMouseLeave={() => setHovered(null)}
+                className={cn(
+                  "rounded-xl px-2.5 py-2 transition-all",
+                  hovered === i ? "bg-surface-2" : hovered !== null && "opacity-50",
+                )}
+              >
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="flex min-w-0 items-center gap-2 font-semibold">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: d.color }} />
+                    <span className="truncate">{d.name}</span>
+                  </span>
+                  <span className="shrink-0 font-bold tabular">{format(d.value)}</span>
+                </div>
+                <div className="mt-1.5 flex items-center gap-2">
+                  <div className="h-1 flex-1 overflow-hidden rounded-full bg-surface-2">
+                    <div className="h-full rounded-full" style={{ width: `${d.percent}%`, backgroundColor: d.color }} />
+                  </div>
+                  <span className="w-10 text-right text-[11px] text-subtle tabular">{d.percent.toFixed(0)}%</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
   );
 };
