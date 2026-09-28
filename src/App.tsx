@@ -30,7 +30,7 @@ import { UpcomingCharges } from "./components/dashboard/UpcomingCharges";
 import { RecurringView } from "./components/recurring/RecurringView";
 import { RecurringForm } from "./components/recurring/RecurringForm";
 import { AutoChargesBanner } from "./components/recurring/AutoChargesBanner";
-import { generateDue } from "./lib/recurring";
+import { generateDue, ruleStatus } from "./lib/recurring";
 import { useTheme } from "./hooks/useTheme";
 import { currentMonth, shiftMonth, todayISO } from "./lib/format";
 import { computeTotals } from "./lib/stats";
@@ -128,6 +128,8 @@ export default function App() {
 
   // Alla ripresa non si recuperano gli addebiti del periodo di pausa
   const toggleRule = (id: string) => {
+    const wasActive = rules.find((r) => r.id === id)?.active;
+    showToast(wasActive ? "Messo in pausa" : "Riattivato");
     setRules((prev) =>
       prev.map((r) =>
         r.id !== id
@@ -472,22 +474,13 @@ export default function App() {
           )}
 
           {view === "recurring" && (
-            <div className="space-y-4 sm:space-y-6">
-              <AutoChargesBanner
-                charges={autoCharges}
-                onExport={exportJSON}
-                onDismiss={() => setAutoCharges([])}
-              />
-              <RecurringView
-                rules={rules}
-                transactions={transactions}
-                today={today}
-                onCreate={(kind) => setRecurringSheet({ kind })}
-                onEdit={(rule) => setRecurringSheet({ kind: rule.kind, rule })}
-                onToggle={toggleRule}
-                onDelete={deleteRule}
-              />
-            </div>
+            <RecurringView
+              rules={rules}
+              transactions={transactions}
+              today={today}
+              onCreate={(kind) => setRecurringSheet({ kind })}
+              onOpen={(rule) => setRecurringSheet({ kind: rule.kind, rule })}
+            />
           )}
 
           {view === "analytics" && (
@@ -521,7 +514,9 @@ export default function App() {
         onClose={closeRecurringSheet}
         title={
           recurringSheet?.rule
-            ? "Modifica"
+            ? recurringSheet.kind === "installment"
+              ? "Modifica piano rate"
+              : "Modifica abbonamento"
             : recurringSheet?.kind === "installment"
               ? "Nuovo pagamento a rate"
               : "Nuovo abbonamento"
@@ -534,6 +529,23 @@ export default function App() {
             initial={recurringSheet.rule}
             defaultKind={recurringSheet.kind}
             onSave={saveRule}
+            onToggle={
+              recurringSheet.rule &&
+              !ruleStatus(recurringSheet.rule, transactions, today).completed
+                ? () => {
+                    toggleRule(recurringSheet.rule!.id);
+                    closeRecurringSheet();
+                  }
+                : undefined
+            }
+            onDelete={
+              recurringSheet.rule
+                ? () => {
+                    deleteRule(recurringSheet.rule!.id);
+                    closeRecurringSheet();
+                  }
+                : undefined
+            }
           />
         )}
       </Sheet>

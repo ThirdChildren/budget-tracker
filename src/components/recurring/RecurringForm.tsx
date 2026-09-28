@@ -1,5 +1,15 @@
 import { useMemo, useState, type FC } from "react";
-import { CalendarDays, Check, CreditCard, History, PenLine, Repeat } from "lucide-react";
+import {
+  CalendarDays,
+  Check,
+  CreditCard,
+  History,
+  Pause,
+  PenLine,
+  Play,
+  Repeat,
+  Trash2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatEUR, todayISO } from "@/lib/format";
 import {
@@ -17,6 +27,9 @@ interface Props {
   initial?: RecurringRule; // presente in modifica
   defaultKind?: RecurringKind;
   onSave: (rule: Omit<RecurringRule, "id"> & { id?: string }, registerPast: boolean) => void;
+  // solo in modifica
+  onToggle?: () => void; // assente se il piano rate è già saldato
+  onDelete?: () => void;
 }
 
 const fieldLabel = "mb-2 block text-xs font-bold uppercase tracking-wide text-subtle";
@@ -28,7 +41,14 @@ const INSTALLMENT_PRESETS = [3, 4, 6, 10, 12];
 const formatLongDate = (iso: string) =>
   new Date(iso + "T00:00").toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" });
 
-export const RecurringForm: FC<Props> = ({ initial, defaultKind = "subscription", onSave }) => {
+export const RecurringForm: FC<Props> = ({
+  initial,
+  defaultKind = "subscription",
+  onSave,
+  onToggle,
+  onDelete,
+}) => {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [kind, setKind] = useState<RecurringKind>(initial?.kind ?? defaultKind);
   const [description, setDescription] = useState(initial?.description ?? "");
   const [category, setCategory] = useState(initial?.category ?? "");
@@ -295,6 +315,53 @@ export const RecurringForm: FC<Props> = ({ initial, defaultKind = "subscription"
         <Check className="h-4 w-4" strokeWidth={3} />
         {initial ? "Salva modifiche" : isInstallment ? "Crea piano rate" : "Crea abbonamento"}
       </button>
+
+      {/* Gestione: pausa ed eliminazione (solo in modifica) */}
+      {initial && (onToggle || onDelete) && (
+        <div className="flex flex-col gap-2 border-t border-line pt-5 sm:flex-row">
+          {onToggle && (
+            <button
+              type="button"
+              onClick={onToggle}
+              className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-line px-4 py-3 text-sm font-bold transition-colors hover:bg-surface-2"
+            >
+              {initial.active ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              {initial.active ? "Metti in pausa" : "Riprendi"}
+            </button>
+          )}
+          {onDelete &&
+            (confirmDelete ? (
+              <div className="flex flex-1 items-center gap-2 rounded-2xl bg-expense/10 p-1.5 pl-4 animate-in fade-in">
+                <span className="flex-1 text-xs font-semibold text-expense">
+                  Eliminare? I movimenti già registrati restano.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(false)}
+                  className="rounded-xl px-3 py-2 text-xs font-bold text-subtle hover:bg-surface"
+                >
+                  Annulla
+                </button>
+                <button
+                  type="button"
+                  onClick={onDelete}
+                  className="rounded-xl bg-expense px-3 py-2 text-xs font-bold text-white"
+                >
+                  Elimina
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-line px-4 py-3 text-sm font-bold text-expense transition-colors hover:border-expense/30 hover:bg-expense/5"
+              >
+                <Trash2 className="h-4 w-4" />
+                Elimina
+              </button>
+            ))}
+        </div>
+      )}
     </form>
   );
 };
