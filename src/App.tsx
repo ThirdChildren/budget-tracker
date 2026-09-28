@@ -8,9 +8,16 @@ import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
 import { Capacitor } from "@capacitor/core";
 import { Check } from "lucide-react";
 
-import type { Transaction, PaymentMethod, TransactionType } from "./types";
+import type {
+  BackupFile,
+  PaymentMethod,
+  RecurringKind,
+  RecurringRule,
+  Transaction,
+  TransactionType,
+} from "./types";
 import { TransactionForm } from "./components/TransactionForm";
-import { TransactionSheet } from "./components/TransactionSheet";
+import { Sheet } from "./components/Sheet";
 import { CategoryList } from "./components/CategoryList";
 import { TransactionsView } from "./components/TransactionsView";
 import { SideNav, BottomNav, type View } from "./components/layout/Navigation";
@@ -19,8 +26,13 @@ import { BalanceHero, type MonthPoint } from "./components/dashboard/BalanceHero
 import { StatTiles } from "./components/dashboard/StatTiles";
 import { BitcoinCard } from "./components/dashboard/BitcoinCard";
 import { RecentTransactions } from "./components/dashboard/RecentTransactions";
+import { UpcomingCharges } from "./components/dashboard/UpcomingCharges";
+import { RecurringView } from "./components/recurring/RecurringView";
+import { RecurringForm } from "./components/recurring/RecurringForm";
+import { AutoChargesBanner } from "./components/recurring/AutoChargesBanner";
+import { generateDue } from "./lib/recurring";
 import { useTheme } from "./hooks/useTheme";
-import { currentMonth, shiftMonth } from "./lib/format";
+import { currentMonth, shiftMonth, todayISO } from "./lib/format";
 import { computeTotals } from "./lib/stats";
 import { MoneyProvider, toSats } from "./lib/money";
 
@@ -59,6 +71,81 @@ export default function App() {
 
   const closeSheet = useCallback(() => setIsSheetOpen(false), []);
 
+  // Abbonamenti e rate: le regole viaggiano nello stesso JSON delle transazioni
+  const [rules, setRules] = useState<RecurringRule[]>([]);
+  const [recurringSheet, setRecurringSheet] = useState<{
+    kind: RecurringKind;
+    rule?: RecurringRule;
+  } | null>(null);
+  const closeRecurringSheet = useCallback(() => setRecurringSheet(null), []);
+  // addebiti registrati automaticamente in questa sessione (per il banner)
+  const [autoCharges, setAutoCharges] = useState<Transaction[]>([]);
+  // modifiche non ancora esportate nel JSON
+  const [unsaved, setUnsaved] = useState(false);
+
+  // "oggi" si aggiorna se l'app resta aperta a cavallo della mezzanotte
+  const [today, setToday] = useState(todayISO);
+  useEffect(() => {
+    const interval = setInterval(() => setToday(todayISO()), 15 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Registra in automatico gli addebiti ricorrenti arrivati a scadenza
+  useEffect(() => {
+    const due = generateDue(rules, transactions, today);
+    if (due.length === 0) return;
+    const created = due.map((t) => ({ ...t, id: uuid() }));
+    const key = (t: Transaction) => `${t.recurringId}#${t.recurringIndex}`;
+    setTransactions((prev) => {
+      const existing = new Set(prev.filter((t) => t.recurringId).map(key));
+      const fresh = created.filter((t) => !existing.has(key(t)));
+      return fresh.length ? [...prev, ...fresh] : prev;
+    });
+    setAutoCharges((prev) => [...prev, ...created]);
+    setUnsaved(true);
+  }, [rules, transactions, today]);
+
+  const saveRule = (
+    data: Omit<RecurringRule, "id"> & { id?: string },
+    registerPast: boolean,
+  ) => {
+    if (data.id) {
+      const updated = data as RecurringRule;
+      setRules((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+      showToast("Modifiche salvate");
+    } else {
+      const rule: RecurringRule = {
+        ...data,
+        id: uuid(),
+        ...(registerPast ? {} : { skipBefore: today }),
+      };
+      setRules((prev) => [...prev, rule]);
+      showToast(rule.kind === "installment" ? "Piano rate creato" : "Abbonamento creato");
+    }
+    setUnsaved(true);
+    closeRecurringSheet();
+  };
+
+  // Alla ripresa non si recuperano gli addebiti del periodo di pausa
+  const toggleRule = (id: string) => {
+    setRules((prev) =>
+      prev.map((r) =>
+        r.id !== id
+          ? r
+          : r.active
+            ? { ...r, active: false }
+            : { ...r, active: true, skipBefore: today },
+      ),
+    );
+    setUnsaved(true);
+  };
+
+  const deleteRule = (id: string) => {
+    setRules((prev) => prev.filter((r) => r.id !== id));
+    setUnsaved(true);
+    showToast("Eliminato: i movimenti già registrati restano");
+  };
+
   // Fetch Bitcoin price from CoinGecko API
   useEffect(() => {
     const fetchBtcPrice = async () => {
@@ -89,6 +176,7 @@ export default function App() {
       ...prev,
       { id: uuid(), ...data, amount: +data.amount },
     ]);
+    setUnsaved(true);
   };
 
   // import JSON
@@ -98,9 +186,19 @@ export default function App() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
-        const parsed = JSON.parse(ev.target?.result as string) as Transaction[];
-        setTransactions(parsed);
-        showToast(`${parsed.length} transazioni importate`);
+        // formato vecchio: array di transazioni; nuovo: { transactions, recurring }
+        const parsed = JSON.parse(ev.target?.result as string) as
+          | Transaction[]
+          | BackupFile;
+        const imported = Array.isArray(parsed) ? parsed : parsed.transactions;
+        if (!Array.isArray(imported)) throw new Error("formato non valido");
+        setTransactions(imported);
+        if (!Array.isArray(parsed) && Array.isArray(parsed.recurring)) {
+          setRules(parsed.recurring);
+        }
+        setAutoCharges([]);
+        setUnsaved(false);
+        showToast(`${imported.length} transazioni importate`);
       } catch {
         alert("File non valido");
       }
@@ -111,7 +209,8 @@ export default function App() {
 
   // export JSON
   const exportJSON = async () => {
-    const content = JSON.stringify(transactions, null, 2);
+    const backup: BackupFile = { version: 2, transactions, recurring: rules };
+    const content = JSON.stringify(backup, null, 2);
     const fileName = `transactions_${
       new Date().toISOString().split("T")[0]
     }.json`;
@@ -136,6 +235,7 @@ export default function App() {
           encoding: Encoding.UTF8,
         });
         showToast(`Salvato in Documenti: ${fileName}`);
+        setUnsaved(false);
       } catch (error) {
         console.error("Errore salvataggio file:", error);
         alert(`Errore: ${error}`);
@@ -146,6 +246,7 @@ export default function App() {
         type: "application/json",
       });
       saveAs(blob, fileName);
+      setUnsaved(false);
     }
   };
 
@@ -270,6 +371,7 @@ export default function App() {
     onExportJSON: exportJSON,
     onExportCSV: exportCSV,
     onImport: handleUpload,
+    unsaved,
   };
 
   return (
@@ -292,6 +394,9 @@ export default function App() {
           onMonthChange={setSelectedMonth}
           paymentMethod={selectedPaymentMethod}
           onPaymentMethodChange={setSelectedPaymentMethod}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          {...dataActions}
         />
 
         <main
@@ -300,6 +405,11 @@ export default function App() {
         >
           {view === "dashboard" && (
             <div className="space-y-4 sm:space-y-6">
+              <AutoChargesBanner
+                charges={autoCharges}
+                onExport={exportJSON}
+                onDismiss={() => setAutoCharges([])}
+              />
               <div
                 className={
                   selectedPaymentMethod === "bitcoin"
@@ -335,7 +445,13 @@ export default function App() {
                 <div className="lg:col-span-3">
                   <CategoryList transactions={filtered} inSats={inSats} />
                 </div>
-                <div className="lg:sticky lg:top-32 lg:col-span-2">
+                <div className="space-y-4 sm:space-y-6 lg:sticky lg:top-32 lg:col-span-2">
+                  <UpcomingCharges
+                    rules={rules}
+                    transactions={transactions}
+                    today={today}
+                    onManage={() => changeView("recurring")}
+                  />
                   <RecentTransactions
                     transactions={filtered}
                     showInSats={inSats}
@@ -353,6 +469,25 @@ export default function App() {
               typeFilter={typeFilter}
               onTypeFilterChange={setTypeFilter}
             />
+          )}
+
+          {view === "recurring" && (
+            <div className="space-y-4 sm:space-y-6">
+              <AutoChargesBanner
+                charges={autoCharges}
+                onExport={exportJSON}
+                onDismiss={() => setAutoCharges([])}
+              />
+              <RecurringView
+                rules={rules}
+                transactions={transactions}
+                today={today}
+                onCreate={(kind) => setRecurringSheet({ kind })}
+                onEdit={(rule) => setRecurringSheet({ kind: rule.kind, rule })}
+                onToggle={toggleRule}
+                onDelete={deleteRule}
+              />
+            </div>
           )}
 
           {view === "analytics" && (
@@ -379,13 +514,31 @@ export default function App() {
         view={view}
         onViewChange={changeView}
         onAdd={() => setIsSheetOpen(true)}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-        transactionCount={filtered.length}
-        {...dataActions}
       />
 
-      <TransactionSheet
+      <Sheet
+        open={recurringSheet !== null}
+        onClose={closeRecurringSheet}
+        title={
+          recurringSheet?.rule
+            ? "Modifica"
+            : recurringSheet?.kind === "installment"
+              ? "Nuovo pagamento a rate"
+              : "Nuovo abbonamento"
+        }
+        subtitle="Gli addebiti vengono registrati in automatico alla scadenza"
+      >
+        {recurringSheet && (
+          <RecurringForm
+            key={recurringSheet.rule?.id ?? recurringSheet.kind}
+            initial={recurringSheet.rule}
+            defaultKind={recurringSheet.kind}
+            onSave={saveRule}
+          />
+        )}
+      </Sheet>
+
+      <Sheet
         open={isSheetOpen}
         onClose={closeSheet}
         title="Nuova transazione"
@@ -409,7 +562,7 @@ export default function App() {
           paymentMethod={selectedPaymentMethod}
           btcPrice={btcPrice}
         />
-      </TransactionSheet>
+      </Sheet>
 
       {/* Toast di conferma */}
       {toast && (

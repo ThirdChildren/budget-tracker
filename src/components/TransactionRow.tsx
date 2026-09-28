@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import { Bitcoin } from "lucide-react";
+import { Bitcoin, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getCategory, tint, TYPES } from "@/lib/config";
 import { formatEUR, formatSats, formatShortDate, formatTxAmount } from "@/lib/format";
@@ -42,6 +42,9 @@ export const TransactionRow: FC<Props> = ({ tx, showInSats, showDate = true }) =
             </span>
           )}
           {tx.paymentMethod === "bitcoin" && <Bitcoin className="h-3 w-3 shrink-0 text-btc" />}
+          {tx.recurringId && (
+            <Repeat className="h-3 w-3 shrink-0 text-subtle" aria-label="Addebito ricorrente" />
+          )}
         </div>
       </div>
 

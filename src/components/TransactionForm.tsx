@@ -3,7 +3,8 @@ import { useForm } from "react-hook-form";
 import { AlertTriangle, CalendarDays, Check, ListPlus, PenLine, X } from "lucide-react";
 import type { Transaction, PaymentMethod } from "../types";
 import { cn } from "@/lib/utils";
-import { CATEGORIES, getCategory, tint, TYPES, TYPE_ORDER } from "@/lib/config";
+import { getCategory, tint, TYPES, TYPE_ORDER } from "@/lib/config";
+import { CategoryPicker } from "./CategoryPicker";
 import { formatEUR, formatSats, formatShortDate, todayISO } from "@/lib/format";
 
 interface Props {
@@ -168,7 +169,7 @@ export const TransactionForm: FC<Props> = ({
               required: "Inserisci un importo",
               min: { value: 0.01, message: "L'importo deve essere maggiore di 0" },
             })}
-            className="w-full min-w-[4ch] max-w-[14rem] bg-transparent text-center text-5xl [field-sizing:content] font-extrabold tracking-tight tabular placeholder:text-ink/20 focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            className="w-auto min-w-[3ch] max-w-[14rem] bg-transparent text-center text-5xl [field-sizing:content] font-extrabold tracking-tight tabular placeholder:text-ink/20 focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
           {isBtc && amountUnit === "sats" && <span className="text-lg font-bold text-subtle">sats</span>}
         </div>
@@ -179,37 +180,10 @@ export const TransactionForm: FC<Props> = ({
       {/* Categoria */}
       <div>
         <span className={fieldLabel}>Categoria</span>
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-          {CATEGORIES.map(({ name, icon: Icon, color }) => {
-            const active = category === name;
-            return (
-              <label
-                key={name}
-                className={cn(
-                  "group flex cursor-pointer flex-col items-center gap-1.5 rounded-2xl border p-2.5 text-center transition-all",
-                  active ? "border-transparent shadow-md" : "border-line hover:border-ink/20",
-                )}
-                style={active ? { backgroundColor: tint(color, "1a"), boxShadow: `inset 0 0 0 2px ${color}` } : undefined}
-              >
-                <input
-                  type="radio"
-                  value={name}
-                  className="sr-only"
-                  {...register("category", { required: "Scegli una categoria" })}
-                />
-                <span
-                  className="flex h-9 w-9 items-center justify-center rounded-xl transition-transform group-hover:scale-110"
-                  style={{ backgroundColor: active ? color : tint(color), color: active ? "#fff" : color }}
-                >
-                  <Icon className="h-[18px] w-[18px]" />
-                </span>
-                <span className="line-clamp-1 w-full text-[11px] font-semibold leading-tight">
-                  {name === "Piano accumulo bitcoin" ? "PAC Bitcoin" : name}
-                </span>
-              </label>
-            );
-          })}
-        </div>
+        <CategoryPicker
+          selected={category}
+          inputProps={register("category", { required: "Scegli una categoria" })}
+        />
         {errors.category && <p className={errorText}>{errors.category.message}</p>}
       </div>
 

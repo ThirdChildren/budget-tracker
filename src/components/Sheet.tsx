@@ -10,7 +10,7 @@ interface Props {
 }
 
 // Bottom sheet su mobile, dialog centrato su desktop
-export const TransactionSheet: FC<Props> = ({ open, onClose, title, subtitle, children }) => {
+export const Sheet: FC<Props> = ({ open, onClose, title, subtitle, children }) => {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();

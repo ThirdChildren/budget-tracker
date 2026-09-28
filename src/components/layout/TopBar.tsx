@@ -3,9 +3,12 @@ import { ChevronLeft, ChevronRight, CreditCard, Bitcoin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { currentMonth, formatMonth, shiftMonth } from "@/lib/format";
 import type { PaymentMethod } from "@/types";
-import { Logo, NAV_ITEMS, type View } from "./Navigation";
+import type { Theme } from "@/hooks/useTheme";
+import { Logo, MobileMenu, NAV_ITEMS, type DataActions, type View } from "./Navigation";
 
-interface Props {
+interface Props extends DataActions {
+  theme: Theme;
+  onToggleTheme: () => void;
   view: View;
   selectedMonth: string;
   onMonthChange: (m: string) => void;
@@ -16,6 +19,7 @@ interface Props {
 const SUBTITLES: Record<View, string> = {
   dashboard: "Il tuo mese a colpo d'occhio",
   transactions: "Tutti i movimenti del periodo",
+  recurring: "Abbonamenti e pagamenti a rate",
   analytics: "Dove vanno i tuoi soldi",
 };
 
@@ -107,6 +111,7 @@ export const TopBar: FC<Props> = ({
   onMonthChange,
   paymentMethod,
   onPaymentMethodChange,
+  ...menuProps
 }) => {
   const title = NAV_ITEMS.find((n) => n.id === view)!.label;
 
@@ -117,10 +122,11 @@ export const TopBar: FC<Props> = ({
           <div className="lg:hidden">
             <Logo compact />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="text-xl font-extrabold tracking-tight sm:text-2xl">{title}</h1>
             <p className="hidden text-sm text-subtle sm:block">{SUBTITLES[view]}</p>
           </div>
+          <MobileMenu {...menuProps} />
         </div>
 
         <div className="flex items-center gap-2">
